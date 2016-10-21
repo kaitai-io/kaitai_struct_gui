@@ -26,19 +26,12 @@ public class VisualizerPanel extends JPanel {
     private HexLib hexEditor;
     private JSplitPane splitPane;
 
+    private KaitaiStruct struct;
+
     public VisualizerPanel() throws IOException {
         super();
 
         initialize();
-    }
-
-    public void loadAll(String dataFileName, String ksyFileName) {
-        try {
-            KaitaiStruct ks = parseFileWithKSY(ksyFileName, dataFileName);
-            loadStruct(ks);
-        } catch (Exception e) {
-            throw new RuntimeException(e);
-        }
     }
 
     private void initialize() {
@@ -50,7 +43,17 @@ public class VisualizerPanel extends JPanel {
         splitPane = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, treeScroll, hexEditor);
     }
 
+    public void loadAll(String dataFileName, String ksyFileName) {
+        try {
+            loadStruct(parseFileWithKSY(ksyFileName, dataFileName));
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+    }
+
     public void loadStruct(KaitaiStruct struct) throws IOException {
+        this.struct = struct;
+
         struct._io().seek(0);
         byte[] buf = struct._io().readBytesFull();
         hexEditor.setByteContent(buf);
@@ -88,7 +91,7 @@ public class VisualizerPanel extends JPanel {
      * @param ksyFileName
      * @return Java class source code as a string
      */
-    private String compileKSY(String ksyFileName) {
+    private static String compileKSY(String ksyFileName) {
         ClassSpec cs = ClassCompiler.localFileToSpec(ksyFileName);
         StringLanguageOutputWriter out = new StringLanguageOutputWriter(JavaCompiler$.MODULE$.indent());
         RuntimeConfig config = new RuntimeConfig(
@@ -105,7 +108,7 @@ public class VisualizerPanel extends JPanel {
 
     private final static Pattern TOP_CLASS_NAME = Pattern.compile("public class (.*?) extends KaitaiStruct");
 
-    private Class<?> compileAndLoadJava(String javaSrc) throws Exception {
+    private static Class<?> compileAndLoadJava(String javaSrc) throws Exception {
         Matcher m = TOP_CLASS_NAME.matcher(javaSrc);
         if (!m.find())
             throw new RuntimeException("Unable to find top-level class in compiled .java");
@@ -113,14 +116,20 @@ public class VisualizerPanel extends JPanel {
         return InMemoryJavaCompiler.compile(DEST_PACKAGE + "." + className, javaSrc);
     }
 
-    private KaitaiStruct parseFileWithKSY(String ksyFileName, String binaryFileName) throws Exception {
+    private static KaitaiStruct parseFileWithKSY(String ksyFileName, String binaryFileName) throws Exception {
         String javaSrc = compileKSY(ksyFileName);
         Class<?> ksyClass = compileAndLoadJava(javaSrc);
 
         // Find and run "fromFile" helper method to
         Method fromFileMethod = ksyClass.getMethod("fromFile", String.class);
-        Object ks = fromFileMethod.invoke(null, binaryFileName);
+        Object kso = fromFileMethod.invoke(null, binaryFileName);
+        KaitaiStruct ks = (KaitaiStruct) kso;
 
-        return (KaitaiStruct) ks;
+        // Find and run "_read" that does actual parsing
+        // TODO: wrap this in try-catch block
+        Method readMethod = ksyClass.getMethod("_read");
+        readMethod.invoke(ks);
+
+        return ks;
     }
 }
