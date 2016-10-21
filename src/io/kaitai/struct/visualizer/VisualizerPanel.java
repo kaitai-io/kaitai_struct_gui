@@ -3,6 +3,7 @@ package io.kaitai.struct.visualizer;
 import at.HexLib.library.HexLib;
 import io.kaitai.struct.ClassCompiler;
 import io.kaitai.struct.KaitaiStruct;
+import io.kaitai.struct.RuntimeConfig;
 import io.kaitai.struct.StringLanguageOutputWriter;
 import io.kaitai.struct.format.ClassSpec;
 import io.kaitai.struct.languages.JavaCompiler;
@@ -17,6 +18,8 @@ import javax.swing.tree.ExpandVetoException;
 import javax.swing.tree.TreePath;
 import java.io.IOException;
 import java.lang.reflect.Method;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 public class VisualizerPanel extends JPanel {
     private JTree tree;
@@ -27,10 +30,11 @@ public class VisualizerPanel extends JPanel {
         super();
 
         initialize();
+    }
 
-//        KaitaiStruct ks = Wmf.fromFile("wmf_src/RedBags.wmf");
+    public void loadAll(String dataFileName, String ksyFileName) {
         try {
-            KaitaiStruct ks = parseFileWithKSY("wmf.ksy");
+            KaitaiStruct ks = parseFileWithKSY(ksyFileName, dataFileName);
             loadStruct(ks);
         } catch (Exception e) {
             throw new RuntimeException(e);
@@ -87,22 +91,35 @@ public class VisualizerPanel extends JPanel {
     private String compileKSY(String ksyFileName) {
         ClassSpec cs = ClassCompiler.localFileToSpec(ksyFileName);
         StringLanguageOutputWriter out = new StringLanguageOutputWriter(JavaCompiler$.MODULE$.indent());
-        ClassCompiler cc = new ClassCompiler(cs, new JavaCompiler(true, out, DEST_PACKAGE));
+        RuntimeConfig config = new RuntimeConfig(
+                false,
+                true,
+                DEST_PACKAGE,
+                "",
+                ""
+        );
+        ClassCompiler cc = new ClassCompiler(cs, new JavaCompiler(config, out));
         cc.compile();
         return out.result();
     }
 
+    private final static Pattern TOP_CLASS_NAME = Pattern.compile("public class (.*?) extends KaitaiStruct");
+
     private Class<?> compileAndLoadJava(String javaSrc) throws Exception {
-        return InMemoryJavaCompiler.compile(DEST_PACKAGE + "." + "Wmf", javaSrc);
+        Matcher m = TOP_CLASS_NAME.matcher(javaSrc);
+        if (!m.find())
+            throw new RuntimeException("Unable to find top-level class in compiled .java");
+        String className = m.group(1);
+        return InMemoryJavaCompiler.compile(DEST_PACKAGE + "." + className, javaSrc);
     }
 
-    private KaitaiStruct parseFileWithKSY(String ksyFileName) throws Exception {
+    private KaitaiStruct parseFileWithKSY(String ksyFileName, String binaryFileName) throws Exception {
         String javaSrc = compileKSY(ksyFileName);
         Class<?> ksyClass = compileAndLoadJava(javaSrc);
 
         // Find and run "fromFile" helper method to
         Method fromFileMethod = ksyClass.getMethod("fromFile", String.class);
-        Object ks = fromFileMethod.invoke(null, "wmf_src/RedBags.wmf");
+        Object ks = fromFileMethod.invoke(null, binaryFileName);
 
         return (KaitaiStruct) ks;
     }
