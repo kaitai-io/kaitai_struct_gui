@@ -1,8 +1,13 @@
 package io.kaitai.struct.visualizer;
 
 import at.HexLib.library.HexLib;
+import io.kaitai.struct.ClassCompiler;
 import io.kaitai.struct.KaitaiStruct;
-import io.kaitai.struct.formats.Wmf;
+import io.kaitai.struct.StringLanguageOutputWriter;
+import io.kaitai.struct.format.ClassSpec;
+import io.kaitai.struct.languages.JavaCompiler;
+import io.kaitai.struct.languages.JavaCompiler$;
+import org.mdkt.compiler.InMemoryJavaCompiler;
 
 import javax.swing.*;
 import javax.swing.event.TreeExpansionEvent;
@@ -11,6 +16,7 @@ import javax.swing.tree.DefaultTreeModel;
 import javax.swing.tree.ExpandVetoException;
 import javax.swing.tree.TreePath;
 import java.io.IOException;
+import java.lang.reflect.Method;
 
 public class VisualizerPanel extends JPanel {
     private JTree tree;
@@ -22,8 +28,13 @@ public class VisualizerPanel extends JPanel {
 
         initialize();
 
-        KaitaiStruct ks = Wmf.fromFile("wmf_src/RedBags.wmf");
-        loadStruct(ks);
+//        KaitaiStruct ks = Wmf.fromFile("wmf_src/RedBags.wmf");
+        try {
+            KaitaiStruct ks = parseFileWithKSY("wmf.ksy");
+            loadStruct(ks);
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
     }
 
     private void initialize() {
@@ -64,5 +75,35 @@ public class VisualizerPanel extends JPanel {
 
     public JSplitPane getSplitPane() {
         return splitPane;
+    }
+
+    public static final String DEST_PACKAGE = "io.kaitai.struct.visualized";
+
+    /**
+     * Compiles a given .ksy file into Java class source.
+     * @param ksyFileName
+     * @return Java class source code as a string
+     */
+    private String compileKSY(String ksyFileName) {
+        ClassSpec cs = ClassCompiler.localFileToSpec(ksyFileName);
+        StringLanguageOutputWriter out = new StringLanguageOutputWriter(JavaCompiler$.MODULE$.indent());
+        ClassCompiler cc = new ClassCompiler(cs, new JavaCompiler(true, out, DEST_PACKAGE));
+        cc.compile();
+        return out.result();
+    }
+
+    private Class<?> compileAndLoadJava(String javaSrc) throws Exception {
+        return InMemoryJavaCompiler.compile(DEST_PACKAGE + "." + "Wmf", javaSrc);
+    }
+
+    private KaitaiStruct parseFileWithKSY(String ksyFileName) throws Exception {
+        String javaSrc = compileKSY(ksyFileName);
+        Class<?> ksyClass = compileAndLoadJava(javaSrc);
+
+        // Find and run "fromFile" helper method to
+        Method fromFileMethod = ksyClass.getMethod("fromFile", String.class);
+        Object ks = fromFileMethod.invoke(null, "wmf_src/RedBags.wmf");
+
+        return (KaitaiStruct) ks;
     }
 }
