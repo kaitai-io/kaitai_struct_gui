@@ -107,7 +107,7 @@ public class DataNode extends DefaultMutableTreeNode {
                 Class<?> cl = value.getClass();
                 System.out.println("cl = " + cl);
 
-                if (cl.isPrimitive()) {
+                if (isImmediate(value, cl)) {
                     updateVisual();
                     return children;
                 }
@@ -164,5 +164,18 @@ public class DataNode extends DefaultMutableTreeNode {
             worker.getPropertyChangeSupport().addPropertyChangeListener("progress", progressListener);
         }
         worker.execute();
+    }
+
+    public static boolean isImmediate(Object value, Class<?> cl) {
+        return cl.isPrimitive() ||
+                value instanceof Byte ||
+                value instanceof Short ||
+                value instanceof Integer ||
+                value instanceof Long ||
+                value instanceof Float ||
+                value instanceof Double ||
+                value instanceof String ||
+                value instanceof Boolean ||
+                value instanceof byte[];
     }
 }
