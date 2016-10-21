@@ -61,7 +61,6 @@ public class DataNode extends DefaultMutableTreeNode {
             }
         }
         setUserObject(sb.toString());
-        setAllowsChildren(!(value.getClass().isPrimitive()));
     }
 
     private void setChildren(List<DataNode> children) {
