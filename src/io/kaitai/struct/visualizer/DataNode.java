@@ -19,16 +19,18 @@ public class DataNode extends DefaultMutableTreeNode {
     private Object value;
     private Method method;
     private String name;
+    private Integer posStart;
+    private Integer posEnd;
 
     public DataNode(int depth, Object value, Method method, String name) {
-        init(depth, value, method, name);
+        init(depth, value, method, name, null, null);
     }
 
-    public DataNode(int depth, Object value, Method method) {
-        init(depth, value, method, null);
+    public DataNode(int depth, Object value, Method method, Integer posStart, Integer posEnd) {
+        init(depth, value, method, null, posStart, posEnd);
     }
 
-    private void init(int depth, Object value, Method method, String name) {
+    private void init(int depth, Object value, Method method, String name, Integer posStart, Integer posEnd) {
         this.depth = depth;
         this.value = value;
         this.method = method;
@@ -37,11 +39,21 @@ public class DataNode extends DefaultMutableTreeNode {
         } else {
             this.name = method != null ? method.getName() : "?";
         }
+        this.posStart = posStart;
+        this.posEnd = posEnd;
 
         add(new DefaultMutableTreeNode("Loading...", false));
         setAllowsChildren(true);
 
         updateVisual();
+    }
+
+    public Integer posStart() {
+        return posStart;
+    }
+
+    public Integer posEnd() {
+        return posEnd;
     }
 
     private void updateVisual() {
@@ -120,7 +132,9 @@ public class DataNode extends DefaultMutableTreeNode {
                         DataNode dn = new DataNode(depth + 1, el, null, arrayIdxStr);
                         children.add(dn);
                     }
-                } else {
+                } else if (value instanceof KaitaiStruct) {
+                    DebugAids debug = DebugAids.fromStruct((KaitaiStruct) value);
+
                     for (Method m : cl.getDeclaredMethods()) {
                         // Ignore static methods, i.e. "fromFile"
                         if (Modifier.isStatic(m.getModifiers()))
@@ -128,7 +142,7 @@ public class DataNode extends DefaultMutableTreeNode {
 
                         String methodName = m.getName();
 
-                        // Ignore all internal methods
+                        // Ignore all internal methods, i.e. "_io", "_parent", "_root"
                         if (methodName.charAt(0) == '_')
                             continue;
 
@@ -137,7 +151,10 @@ public class DataNode extends DefaultMutableTreeNode {
                             field.setAccessible(true);
                             Object curValue = field.get(value);
 
-                            DataNode dn = new DataNode(depth + 1, curValue, m);
+                            Integer posStart = debug.attrStart().get(methodName);
+                            Integer posEnd = debug.attrEnd().get(methodName);
+
+                            DataNode dn = new DataNode(depth + 1, curValue, m, posStart, posEnd);
                             children.add(dn);
                         } catch (NoSuchFieldException e) {
                             System.out.println("no field, ignoring method " + methodName);

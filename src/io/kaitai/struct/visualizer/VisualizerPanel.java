@@ -12,6 +12,8 @@ import org.mdkt.compiler.InMemoryJavaCompiler;
 
 import javax.swing.*;
 import javax.swing.event.TreeExpansionEvent;
+import javax.swing.event.TreeSelectionEvent;
+import javax.swing.event.TreeSelectionListener;
 import javax.swing.event.TreeWillExpandListener;
 import javax.swing.tree.DefaultTreeModel;
 import javax.swing.tree.ExpandVetoException;
@@ -49,20 +51,9 @@ public class VisualizerPanel extends JPanel {
 
         model = new DefaultTreeModel(null);
         tree.setShowsRootHandles(true);
-        tree.addTreeWillExpandListener(new TreeWillExpandListener() {
-            @Override
-            public void treeWillExpand(TreeExpansionEvent event) throws ExpandVetoException {
-                TreePath path = event.getPath();
-                if (path.getLastPathComponent() instanceof DataNode) {
-                    DataNode node = (DataNode) path.getLastPathComponent();
-                    node.explore(model /* , progressListener */, null);
-                }
-            }
-
-            @Override
-            public void treeWillCollapse(TreeExpansionEvent event) throws ExpandVetoException {
-            }
-        });
+        KaitaiTreeListener treeListener = new KaitaiTreeListener();
+        tree.addTreeWillExpandListener(treeListener);
+        tree.addTreeSelectionListener(treeListener);
         tree.setModel(model);
     }
 
@@ -113,6 +104,13 @@ public class VisualizerPanel extends JPanel {
 
     private final static Pattern TOP_CLASS_NAME = Pattern.compile("public class (.*?) extends KaitaiStruct");
 
+    /**
+     * Compiles Java source (given as a string) into bytecode and loads it into current JVM.
+     * @param javaSrc Java source as a string
+     * @return Class reference, which can be used to instantiate the class, call its
+     * static methods, etc.
+     * @throws Exception
+     */
     private static Class<?> compileAndLoadJava(String javaSrc) throws Exception {
         Matcher m = TOP_CLASS_NAME.matcher(javaSrc);
         if (!m.find())
@@ -134,10 +132,29 @@ public class VisualizerPanel extends JPanel {
         // TODO: wrap this in try-catch block
         Method readMethod = ksyClass.getMethod("_read");
         readMethod.invoke(struct);
+    }
 
-        Field fAttrStart = ksyClass.getDeclaredField("_attrStart");
-        attrStart = (Map<String, Integer>) fAttrStart.get(struct);
-        Field fAttrEnd = ksyClass.getDeclaredField("_attrStart");
-        attrEnd = (Map<String, Integer>) fAttrEnd.get(struct);
+    public class KaitaiTreeListener implements TreeWillExpandListener, TreeSelectionListener {
+        @Override
+        public void treeWillExpand(TreeExpansionEvent event) throws ExpandVetoException {
+            TreePath path = event.getPath();
+            if (path.getLastPathComponent() instanceof DataNode) {
+                DataNode node = (DataNode) path.getLastPathComponent();
+                node.explore(model /* , progressListener */, null);
+            }
+        }
+
+        @Override
+        public void treeWillCollapse(TreeExpansionEvent event) throws ExpandVetoException {
+        }
+
+        @Override
+        public void valueChanged(TreeSelectionEvent event) {
+            TreePath path = event.getPath();
+            if (path.getLastPathComponent() instanceof DataNode) {
+                DataNode node = (DataNode) path.getLastPathComponent();
+                System.out.println("" + node.posStart() + " - " + node.posEnd());
+            }
+        }
     }
 }
