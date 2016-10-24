@@ -1,6 +1,7 @@
 package io.kaitai.struct.visualizer;
 
 import at.HexLib.library.HexLib;
+import at.HexLib.library.HexLibSelectionModel;
 import io.kaitai.struct.ClassCompiler;
 import io.kaitai.struct.KaitaiStruct;
 import io.kaitai.struct.RuntimeConfig;
@@ -18,9 +19,11 @@ import javax.swing.event.TreeWillExpandListener;
 import javax.swing.tree.DefaultTreeModel;
 import javax.swing.tree.ExpandVetoException;
 import javax.swing.tree.TreePath;
+import java.awt.*;
 import java.io.IOException;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
+import java.util.ArrayList;
 import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -153,6 +156,12 @@ public class VisualizerPanel extends JPanel {
             TreePath path = event.getPath();
             if (path.getLastPathComponent() instanceof DataNode) {
                 DataNode node = (DataNode) path.getLastPathComponent();
+                if (node.posStart() == null || node.posEnd() == null)
+                    return;
+                HexLibSelectionModel select = hexEditor.getSelectionModel();
+                ArrayList<Point> intervals = new ArrayList<Point>();
+                intervals.add(new Point(node.posStart(), node.posEnd()));
+                select.setSelectionIntervals(intervals);
                 System.out.println("" + node.posStart() + " - " + node.posEnd());
             }
         }
