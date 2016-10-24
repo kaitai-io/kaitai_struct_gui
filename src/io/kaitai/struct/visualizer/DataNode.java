@@ -68,7 +68,7 @@ public class DataNode extends DefaultMutableTreeNode {
             } else if (value instanceof ArrayList) {
                 ArrayList list = (ArrayList) value;
                 sb.append(String.format(" (%d = 0x%x entries)", list.size(), list.size()));
-            } if (value instanceof KaitaiStruct) {
+            } else if (value instanceof KaitaiStruct) {
                 // do not expand
             } else {
                 sb.append(" = ");
