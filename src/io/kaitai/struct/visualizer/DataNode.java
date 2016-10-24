@@ -65,7 +65,10 @@ public class DataNode extends DefaultMutableTreeNode {
                 for (int i = 0; i < 10 && i < bytes.length; i++) {
                     sb.append(String.format("%02x ", bytes[i]));
                 }
-            } else if (value instanceof ArrayList || value instanceof KaitaiStruct) {
+            } else if (value instanceof ArrayList) {
+                ArrayList list = (ArrayList) value;
+                sb.append(String.format(" (%d = 0x%x entries)", list.size(), list.size()));
+            } if (value instanceof KaitaiStruct) {
                 // do not expand
             } else {
                 sb.append(" = ");
@@ -126,9 +129,18 @@ public class DataNode extends DefaultMutableTreeNode {
 
                 if (value instanceof ArrayList) {
                     ArrayList list = (ArrayList) value;
+                    DataNode parentNode = (DataNode) parent;
+                    DebugAids debug = DebugAids.fromStruct((KaitaiStruct) parentNode.value);
+
+                    String methodName = method.getName();
+
                     for (int i = 0; i < list.size(); i++) {
                         Object el = list.get(i);
                         String arrayIdxStr = String.format("%04d", i);
+
+                        Integer posStart = debug.getStart(methodName, i);
+                        Integer posEnd = debug.getEnd(methodName, i);
+
                         DataNode dn = new DataNode(depth + 1, el, null, arrayIdxStr);
                         children.add(dn);
                     }
@@ -151,8 +163,8 @@ public class DataNode extends DefaultMutableTreeNode {
                             field.setAccessible(true);
                             Object curValue = field.get(value);
 
-                            Integer posStart = debug.attrStart().get(methodName);
-                            Integer posEnd = debug.attrEnd().get(methodName);
+                            Integer posStart = debug.getStart(methodName);
+                            Integer posEnd = debug.getEnd(methodName);
 
                             DataNode dn = new DataNode(depth + 1, curValue, m, posStart, posEnd);
                             children.add(dn);
