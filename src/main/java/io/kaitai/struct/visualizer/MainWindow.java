@@ -18,7 +18,7 @@ public class MainWindow extends JFrame {
         setVisible(true);
     }
 
-    public static void main(String arg[]) throws IOException {
+    public static void main(final String arg[]) throws IOException {
         SwingUtilities.invokeLater(new Runnable() {
             public void run() {
                 try {
