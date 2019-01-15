@@ -19,6 +19,13 @@
             <artifactId>kaitai-struct-compiler_2.11</artifactId>
             <version>0.5-SNAPSHOT</version>
         </dependency>
+        <dependency>
+            <groupId>at.HexLib</groupId>
+            <artifactId>HexLib</artifactId>
+            <version>0.0.0</version>
+            <scope>system</scope>
+            <systemPath>${project.basedir}/lib/HexLib.jar</systemPath>
+        </dependency>
     </dependencies>
 
     <build>
