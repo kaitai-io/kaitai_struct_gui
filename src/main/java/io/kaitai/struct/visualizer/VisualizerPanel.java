@@ -1,5 +1,12 @@
 package io.kaitai.struct.visualizer;
 
+import java.awt.Point;
+import java.io.IOException;
+import java.lang.reflect.Method;
+import java.util.ArrayList;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
 import at.HexLib.library.HexLib;
 import at.HexLib.library.HexLibSelectionModel;
 import io.kaitai.struct.CompileLog;
@@ -10,9 +17,9 @@ import io.kaitai.struct.format.ClassSpec;
 import io.kaitai.struct.formats.JavaClassSpecs;
 import io.kaitai.struct.formats.JavaKSYParser;
 import io.kaitai.struct.languages.JavaCompiler$;
+
 import org.mdkt.compiler.InMemoryJavaCompiler;
 
-import javax.swing.*;
 import javax.swing.event.TreeExpansionEvent;
 import javax.swing.event.TreeSelectionEvent;
 import javax.swing.event.TreeSelectionListener;
@@ -20,39 +27,28 @@ import javax.swing.event.TreeWillExpandListener;
 import javax.swing.tree.DefaultTreeModel;
 import javax.swing.tree.ExpandVetoException;
 import javax.swing.tree.TreePath;
-import java.awt.*;
-import java.io.IOException;
-import java.lang.reflect.Method;
-import java.util.ArrayList;
-import java.util.Map;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
+import javax.swing.JPanel;
+import javax.swing.JScrollPane;
+import javax.swing.JSplitPane;
+import javax.swing.JTree;
 
 public class VisualizerPanel extends JPanel {
-    private JTree tree;
-    private DefaultTreeModel model;
-    private HexLib hexEditor;
-    private JSplitPane splitPane;
+    private static final String DEST_PACKAGE = "io.kaitai.struct.visualized";
+    private static final Pattern TOP_CLASS_NAME = Pattern.compile("public class (.*?) extends KaitaiStruct");
+
+    private final JTree tree = new JTree();
+    private final DefaultTreeModel model = new DefaultTreeModel(null);
+    private final HexLib hexEditor = new HexLib(new byte[0]);
+    private final JSplitPane splitPane;
 
     private KaitaiStruct struct;
-    private Map<String, Integer> attrStart;
-    private Map<String, Integer> attrEnd;
 
     public VisualizerPanel() throws IOException {
         super();
-
-        initialize();
-    }
-
-    private void initialize() {
-        tree = new JTree();
-        hexEditor = new HexLib(new byte[] {});
-
         JScrollPane treeScroll = new JScrollPane(tree);
 
         splitPane = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, treeScroll, hexEditor);
 
-        model = new DefaultTreeModel(null);
         tree.setShowsRootHandles(true);
         KaitaiTreeListener treeListener = new KaitaiTreeListener();
         tree.addTreeWillExpandListener(treeListener);
@@ -79,8 +75,6 @@ public class VisualizerPanel extends JPanel {
         return splitPane;
     }
 
-    public static final String DEST_PACKAGE = "io.kaitai.struct.visualized";
-
     /**
      * Compiles a given .ksy file into Java class source.
      * @param ksyFileName
@@ -105,8 +99,6 @@ public class VisualizerPanel extends JPanel {
         final CompileLog.SpecSuccess result = Main.compile(specs, spec, JavaCompiler$.MODULE$, config);
         return result.files().apply(0).contents();
     }
-
-    private final static Pattern TOP_CLASS_NAME = Pattern.compile("public class (.*?) extends KaitaiStruct");
 
     /**
      * Compiles Java source (given as a string) into bytecode and loads it into current JVM.
@@ -160,10 +152,10 @@ public class VisualizerPanel extends JPanel {
                 if (node.posStart() == null || node.posEnd() == null)
                     return;
                 HexLibSelectionModel select = hexEditor.getSelectionModel();
-                ArrayList<Point> intervals = new ArrayList<Point>();
+                ArrayList<Point> intervals = new ArrayList<>();
                 intervals.add(new Point(node.posStart(), node.posEnd()));
                 select.setSelectionIntervals(intervals);
-                System.out.println("" + node.posStart() + " - " + node.posEnd());
+                System.out.println(node.posStart() + " - " + node.posEnd());
             }
         }
     }
