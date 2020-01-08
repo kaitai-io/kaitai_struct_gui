@@ -60,13 +60,9 @@ public class VisualizerPanel extends JPanel {
         tree.setModel(model);
     }
 
-    public void loadAll(String dataFileName, String ksyFileName) {
-        try {
-            parseFileWithKSY(ksyFileName, dataFileName);
-            loadStruct();
-        } catch (Exception e) {
-            throw new RuntimeException(e);
-        }
+    public void loadAll(String dataFileName, String ksyFileName) throws Exception {
+        parseFileWithKSY(ksyFileName, dataFileName);
+        loadStruct();
     }
 
     private void loadStruct() throws IOException {
