@@ -25,6 +25,33 @@ languages. These modules will include the generated code for a parser
 that can read described data structure from a file / stream and give
 access to it in a nice, easy-to-comprehend API.
 
+## Build
+Install java, maven and, if on windows, git-bash
+
+First, install dependencies into local maven repository:
+
+```bash
+mvn install:install-file -Dfile=lib/HexLib.jar -DgroupId=at.HexLib -DartifactId=HexLib -Dversion=0.0.0 -Dpackaging=jar -DlocalRepositoryPath=./lib
+```
+
+Then build project as usual:
+
+```bash
+mvn install
+```
+
+If you got error:
+```bash
+[WARNING] The POM for kaitai_struct_visualizer_java:HexLib:jar:0.0.0 is missing, no dependency information available
+```
+it means, that you already tried to build project without success and maven cache
+unsuccessful state of dependency resolution. Just add switch `-U` to maven invocation
+to force maven re-check dependencies:
+
+```bash
+$ mvn -U install
+```
+
 ## Licensing
 
 This GUI vis tool project itself is copyright (C) 2016-2019 Kaitai

@@ -23,8 +23,6 @@
             <groupId>at.HexLib</groupId>
             <artifactId>HexLib</artifactId>
             <version>0.0.0</version>
-            <scope>system</scope>
-            <systemPath>${project.basedir}/lib/HexLib.jar</systemPath>
         </dependency>
     </dependencies>
 
@@ -51,6 +49,10 @@
             <snapshots>
                 <enabled>true</enabled>
             </snapshots>
+        </repository>
+        <repository>
+            <id>local-jars</id>
+            <url>file://${project.basedir}/lib</url>
         </repository>
     </repositories>
 
