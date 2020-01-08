@@ -66,7 +66,7 @@ public class VisualizerPanel extends JPanel {
         byte[] buf = struct._io().readBytesFull();
         hexEditor.setByteContent(buf);
 
-        DataNode root = new DataNode(0, struct, null, "[root]");
+        final DataNode root = new DataNode(0, struct, "[root]");
         model.setRoot(root);
         root.explore(model /*, progressListener */, null);
     }

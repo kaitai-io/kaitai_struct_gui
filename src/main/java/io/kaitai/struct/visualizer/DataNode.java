@@ -15,22 +15,22 @@ import java.util.List;
 
 public class DataNode extends DefaultMutableTreeNode {
     private boolean explored = false;
-    private int depth;
+    private final int depth;
     private Object value;
-    private Method method;
-    private String name;
-    private Integer posStart;
-    private Integer posEnd;
+    private final Method method;
+    private final String name;
+    private final Integer posStart;
+    private final Integer posEnd;
 
-    public DataNode(int depth, Object value, Method method, String name) {
-        init(depth, value, method, name, null, null);
+    public DataNode(int depth, Object value, String name) {
+        this(depth, value, null, name, null, null);
     }
 
-    public DataNode(int depth, Object value, Method method, Integer posStart, Integer posEnd) {
-        init(depth, value, method, null, posStart, posEnd);
+    private DataNode(int depth, Object value, Method method, Integer posStart, Integer posEnd) {
+        this(depth, value, method, null, posStart, posEnd);
     }
 
-    private void init(int depth, Object value, Method method, String name, Integer posStart, Integer posEnd) {
+    private DataNode(int depth, Object value, Method method, String name, Integer posStart, Integer posEnd) {
         this.depth = depth;
         this.value = value;
         this.method = method;
@@ -101,14 +101,14 @@ public class DataNode extends DefaultMutableTreeNode {
             protected List<DataNode> doInBackground() throws Exception {
                 // Here access database if needed
                 setProgress(0);
-                List<DataNode> children = new ArrayList<DataNode>();
+                final List<DataNode> children = new ArrayList<>();
 
-                System.out.println("exploring " + value);
+                System.out.println("exploring field " + name + ", value = " + value);
 
                 // Wasn't loaded yet?
                 if (value == null) {
                     DataNode parentNode = (DataNode) parent;
-                    System.out.println("parentNode = " + parentNode);
+                    System.out.println("parentNode: name = " + parentNode.name + "; value = " + parentNode.value);
                     value = method.invoke(parentNode.value);
                 }
 
@@ -129,20 +129,12 @@ public class DataNode extends DefaultMutableTreeNode {
 
                 if (value instanceof ArrayList) {
                     ArrayList list = (ArrayList) value;
-                    DataNode parentNode = (DataNode) parent;
-                    DebugAids debug = DebugAids.fromStruct((KaitaiStruct) parentNode.value);
-
-                    String methodName = method.getName();
 
                     for (int i = 0; i < list.size(); i++) {
                         Object el = list.get(i);
                         String arrayIdxStr = String.format("%04d", i);
 
-                        Integer posStart = debug.getStart(methodName, i);
-                        Integer posEnd = debug.getEnd(methodName, i);
-
-                        DataNode dn = new DataNode(depth + 1, el, null, arrayIdxStr);
-                        children.add(dn);
+                        children.add(new DataNode(depth + 1, el, arrayIdxStr));
                     }
                 } else if (value instanceof KaitaiStruct) {
                     DebugAids debug = DebugAids.fromStruct((KaitaiStruct) value);
