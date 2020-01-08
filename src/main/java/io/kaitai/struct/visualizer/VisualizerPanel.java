@@ -2,12 +2,13 @@ package io.kaitai.struct.visualizer;
 
 import at.HexLib.library.HexLib;
 import at.HexLib.library.HexLibSelectionModel;
-import io.kaitai.struct.ClassCompiler;
+import io.kaitai.struct.CompileLog;
 import io.kaitai.struct.KaitaiStruct;
+import io.kaitai.struct.Main;
 import io.kaitai.struct.RuntimeConfig;
-import io.kaitai.struct.StringLanguageOutputWriter;
 import io.kaitai.struct.format.ClassSpec;
-import io.kaitai.struct.languages.JavaCompiler;
+import io.kaitai.struct.formats.JavaClassSpecs;
+import io.kaitai.struct.formats.JavaKSYParser;
 import io.kaitai.struct.languages.JavaCompiler$;
 import org.mdkt.compiler.InMemoryJavaCompiler;
 
@@ -21,7 +22,6 @@ import javax.swing.tree.ExpandVetoException;
 import javax.swing.tree.TreePath;
 import java.awt.*;
 import java.io.IOException;
-import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Map;
@@ -87,18 +87,23 @@ public class VisualizerPanel extends JPanel {
      * @return Java class source code as a string
      */
     private static String compileKSY(String ksyFileName) {
-        ClassSpec cs = ClassCompiler.localFileToSpec(ksyFileName);
-        StringLanguageOutputWriter out = new StringLanguageOutputWriter(JavaCompiler$.MODULE$.indent());
-        RuntimeConfig config = new RuntimeConfig(
-                false,
-                true,
-                DEST_PACKAGE,
-                "",
-                ""
+        final ClassSpec spec = JavaKSYParser.fileNameToSpec(ksyFileName);
+        final JavaClassSpecs specs = new JavaClassSpecs(null, null, spec);
+
+        final RuntimeConfig config = new RuntimeConfig(
+            true, // debug - required for existing _attrStart/_attrEnd/_arrStart/_arrEnd fields
+            true, // opaqueTypes
+            null, // goPackage
+            DEST_PACKAGE,
+            "io.kaitai.struct.ByteBufferKaitaiStream",
+            null, // dotNetNamespace
+            null, // phpNamespace
+            null  // pythonPackage
         );
-        ClassCompiler cc = new ClassCompiler(cs, new JavaCompiler(config, out));
-        cc.compile();
-        return out.result();
+
+        Main.importAndPrecompile(specs, config).value();
+        final CompileLog.SpecSuccess result = Main.compile(specs, spec, JavaCompiler$.MODULE$, config);
+        return result.files().apply(0).contents();
     }
 
     private final static Pattern TOP_CLASS_NAME = Pattern.compile("public class (.*?) extends KaitaiStruct");

@@ -6,7 +6,7 @@
 
     <groupId>groupId</groupId>
     <artifactId>kaitai_struct_visualizer_java</artifactId>
-    <version>0.5-SNAPSHOT</version>
+    <version>0.8-SNAPSHOT</version>
 
     <dependencies>
         <dependency>
@@ -17,7 +17,7 @@
         <dependency>
             <groupId>io.kaitai</groupId>
             <artifactId>kaitai-struct-compiler_2.11</artifactId>
-            <version>0.5-SNAPSHOT</version>
+            <version>0.8-SNAPSHOT</version>
         </dependency>
         <dependency>
             <groupId>at.HexLib</groupId>

@@ -5,7 +5,7 @@ import java.io.IOException;
 
 public class MainWindow extends JFrame {
     private static final String APP_NAME = "Kaitai Struct Visualizer";
-    private static final String VERSION = "0.5";
+    private static final String VERSION = "0.8";
 
     private VisualizerPanel vis;
 
