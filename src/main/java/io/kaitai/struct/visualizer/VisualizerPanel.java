@@ -2,14 +2,19 @@ package io.kaitai.struct.visualizer;
 
 import java.awt.Point;
 import java.io.IOException;
+import java.lang.reflect.Constructor;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
+import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import at.HexLib.library.HexLib;
 import at.HexLib.library.HexLibSelectionModel;
+
+import io.kaitai.struct.ByteBufferKaitaiStream;
 import io.kaitai.struct.CompileLog;
+import io.kaitai.struct.KaitaiStream;
 import io.kaitai.struct.KaitaiStruct;
 import io.kaitai.struct.Main;
 import io.kaitai.struct.RuntimeConfig;
@@ -34,7 +39,17 @@ import javax.swing.JTree;
 
 public class VisualizerPanel extends JPanel {
     private static final String DEST_PACKAGE = "io.kaitai.struct.visualized";
-    private static final Pattern TOP_CLASS_NAME = Pattern.compile("public class (.*?) extends KaitaiStruct");
+    /**
+     * Regexp with 2 groups: class name and type parameters. Type parameters
+     * must be parsed with {@link #PARAMETER_NAME}.
+     */
+    private static final Pattern TOP_CLASS_NAME_AND_PARAMETERS = Pattern.compile(
+        "public class (.+?) extends KaitaiStruct.*" +
+        "public \\1\\(KaitaiStream _io, KaitaiStruct _parent, \\1 _root(.*?)\\)",
+        Pattern.DOTALL
+    );
+    /** Regexp, used to get parameter names from the generated source. */
+    private static final Pattern PARAMETER_NAME = Pattern.compile(", \\S+ ([^,\\s]+)");
 
     private final JTree tree = new JTree();
     private final DefaultTreeModel model = new DefaultTreeModel(null);
@@ -107,27 +122,61 @@ public class VisualizerPanel extends JPanel {
      * static methods, etc.
      * @throws Exception
      */
-    private static Class<?> compileAndLoadJava(String javaSrc) throws Exception {
-        Matcher m = TOP_CLASS_NAME.matcher(javaSrc);
-        if (!m.find())
-            throw new RuntimeException("Unable to find top-level class in compiled .java");
-        String className = m.group(1);
-        return InMemoryJavaCompiler.compile(DEST_PACKAGE + "." + className, javaSrc);
-    }
-
     private void parseFileWithKSY(String ksyFileName, String binaryFileName) throws Exception {
-        String javaSrc = compileKSY(ksyFileName);
-        Class<?> ksyClass = compileAndLoadJava(javaSrc);
+        final String javaSrc = compileKSY(ksyFileName);
+        final Matcher m = TOP_CLASS_NAME_AND_PARAMETERS.matcher(javaSrc);
+        if (!m.find()) {
+            throw new RuntimeException("Unable to find top-level class in generated .java");
+        }
+        // Parse parameter names
+        final ArrayList<String> paramNames = new ArrayList<>();
+        final Matcher p = PARAMETER_NAME.matcher(m.group(2));
+        while (p.find()) {
+            paramNames.add(p.group(1));
+        }
 
-        // Find and run "fromFile" helper method to
-        Method fromFileMethod = ksyClass.getMethod("fromFile", String.class);
-        Object kso = fromFileMethod.invoke(null, binaryFileName);
-        struct = (KaitaiStruct) kso;
+        final Class<?> ksyClass = InMemoryJavaCompiler.compile(DEST_PACKAGE + "." + m.group(1), javaSrc);
+        struct = construct(ksyClass, paramNames, binaryFileName);
 
         // Find and run "_read" that does actual parsing
         // TODO: wrap this in try-catch block
         Method readMethod = ksyClass.getMethod("_read");
         readMethod.invoke(struct);
+    }
+    private static KaitaiStruct construct(Class<?> ksyClass, List<String> paramNames, String binaryFileName) throws Exception {
+        final Constructor<?> c = findConstructor(ksyClass);
+        final Class<?>[] types = c.getParameterTypes();
+        final Object[] args = new Object[types.length];
+        args[0] = new ByteBufferKaitaiStream(binaryFileName);
+        for (int i = 3; i < args.length; ++i) {
+            args[i] = getDefaultValue(types[i]);
+        }
+        // TODO: get parameters from user
+        return (KaitaiStruct)c.newInstance(args);
+    }
+    private static <T> Constructor<T> findConstructor(Class<T> ksyClass) {
+        for (final Constructor c : ksyClass.getDeclaredConstructors()) {
+            final Class<?>[] types = c.getParameterTypes();
+            if (types.length >= 3
+             && types[0] == KaitaiStream.class
+             && types[1] == KaitaiStruct.class
+             && types[2] == ksyClass
+            ) {
+                return c;
+            }
+        }
+        throw new IllegalArgumentException(ksyClass + " has no KaitaiStruct-generated constructor");
+    }
+    private static Object getDefaultValue(Class<?> clazz) {
+        if (clazz == boolean.class) return false;
+        if (clazz == char.class   ) return (char)0;
+        if (clazz == byte.class   ) return (byte)0;
+        if (clazz == short.class  ) return (short)0;
+        if (clazz == int.class    ) return 0;
+        if (clazz == long.class   ) return 0L;
+        if (clazz == float.class  ) return 0.0f;
+        if (clazz == double.class ) return 0.0;
+        return null;
     }
 
     public class KaitaiTreeListener implements TreeWillExpandListener, TreeSelectionListener {
