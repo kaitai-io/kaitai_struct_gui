@@ -16,8 +16,8 @@
         </dependency>
         <dependency>
             <groupId>io.kaitai</groupId>
-            <artifactId>kaitai-struct-compiler_2.11</artifactId>
-            <version>0.8-SNAPSHOT</version>
+            <artifactId>kaitai-struct-compiler_2.12</artifactId>
+            <version>0.8</version>
         </dependency>
         <dependency>
             <groupId>at.HexLib</groupId>
