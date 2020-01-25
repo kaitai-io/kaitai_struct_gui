@@ -1,6 +1,7 @@
 package io.kaitai.struct.visualizer;
 
-import java.awt.Point;
+import java.awt.Color;
+import java.awt.Font;
 import java.io.IOException;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Method;
@@ -8,9 +9,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-
-import at.HexLib.library.HexLib;
-import at.HexLib.library.HexLibSelectionModel;
 
 import io.kaitai.struct.ByteBufferKaitaiStream;
 import io.kaitai.struct.CompileLog;
@@ -37,6 +35,9 @@ import javax.swing.JScrollPane;
 import javax.swing.JSplitPane;
 import javax.swing.JTree;
 
+import tv.porst.jhexview.JHexView;
+import tv.porst.jhexview.SimpleDataProvider;
+
 public class VisualizerPanel extends JPanel {
     private static final String DEST_PACKAGE = "io.kaitai.struct.visualized";
     /**
@@ -51,9 +52,16 @@ public class VisualizerPanel extends JPanel {
     /** Regexp, used to get parameter names from the generated source. */
     private static final Pattern PARAMETER_NAME = Pattern.compile(", \\S+ ([^,\\s]+)");
 
+    /** Color of hex editor section headers. */
+    private static final Color HEADER = new Color(0x0000c0);
+    /** Color of hex data in HEX and ASCII sections. */
+    private static final Color UNMODIFIED = Color.BLACK;
+    /** Background color selected hex data in HEX and ASCII sections. */
+    private static final Color SELECTION = new Color(0xc0c0c0);
+
     private final JTree tree = new JTree();
     private final DefaultTreeModel model = new DefaultTreeModel(null);
-    private final HexLib hexEditor = new HexLib(new byte[0]);
+    private final JHexView hexEditor = new JHexView();
     private final JSplitPane splitPane;
 
     private KaitaiStruct struct;
@@ -61,6 +69,24 @@ public class VisualizerPanel extends JPanel {
     public VisualizerPanel() throws IOException {
         super();
         JScrollPane treeScroll = new JScrollPane(tree);
+
+        hexEditor.setSeparatorsVisible(false);
+        hexEditor.setBytesPerColumn(1);
+        hexEditor.setColumnSpacing(8);
+        hexEditor.setHeaderFontStyle(Font.BOLD);
+
+        hexEditor.setFontColorHeader(HEADER);
+        hexEditor.setFontColorOffsetView(HEADER);
+
+        hexEditor.setFontColorHexView1(UNMODIFIED);
+        hexEditor.setFontColorHexView2(UNMODIFIED);
+        hexEditor.setFontColorAsciiView(UNMODIFIED);
+
+        hexEditor.setSelectionColor(SELECTION);
+
+        hexEditor.setBackgroundColorOffsetView(hexEditor.getBackground());
+        hexEditor.setBackgroundColorHexView(hexEditor.getBackground());
+        hexEditor.setBackgroundColorAsciiView(hexEditor.getBackground());
 
         splitPane = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, treeScroll, hexEditor);
 
@@ -79,7 +105,8 @@ public class VisualizerPanel extends JPanel {
     private void loadStruct() throws IOException {
         struct._io().seek(0);
         byte[] buf = struct._io().readBytesFull();
-        hexEditor.setByteContent(buf);
+        hexEditor.setData(new SimpleDataProvider(buf));
+        hexEditor.setDefinitionStatus(JHexView.DefinitionStatus.DEFINED);
 
         final DataNode root = new DataNode(0, struct, "[root]");
         model.setRoot(root);
@@ -195,16 +222,17 @@ public class VisualizerPanel extends JPanel {
 
         @Override
         public void valueChanged(TreeSelectionEvent event) {
-            TreePath path = event.getPath();
-            if (path.getLastPathComponent() instanceof DataNode) {
-                DataNode node = (DataNode) path.getLastPathComponent();
-                if (node.posStart() == null || node.posEnd() == null)
-                    return;
-                HexLibSelectionModel select = hexEditor.getSelectionModel();
-                ArrayList<Point> intervals = new ArrayList<>();
-                intervals.add(new Point(node.posStart(), node.posEnd()));
-                select.setSelectionIntervals(intervals);
-                System.out.println(node.posStart() + " - " + node.posEnd());
+            hexEditor.getSelectionModel().clearSelection();
+            for (final TreePath path : tree.getSelectionPaths()) {
+                final Object selected = path.getLastPathComponent();
+                if (!(selected instanceof DataNode)) continue;
+
+                final DataNode node = (DataNode)selected;
+                final Integer start = node.posStart();
+                final Integer end   = node.posEnd();
+                if (start == null || end == null) continue;
+                // Selection in nibbles, so multiply by 2
+                hexEditor.getSelectionModel().addSelectionInterval(2*start, 2*end-1);
             }
         }
     }
