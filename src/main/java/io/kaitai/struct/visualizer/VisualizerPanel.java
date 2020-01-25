@@ -1,17 +1,25 @@
 package io.kaitai.struct.visualizer;
 
+import java.awt.Point;
+import java.io.IOException;
+import java.lang.reflect.Method;
+import java.util.ArrayList;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
 import at.HexLib.library.HexLib;
 import at.HexLib.library.HexLibSelectionModel;
-import io.kaitai.struct.ClassCompiler;
+import io.kaitai.struct.CompileLog;
 import io.kaitai.struct.KaitaiStruct;
+import io.kaitai.struct.Main;
 import io.kaitai.struct.RuntimeConfig;
-import io.kaitai.struct.StringLanguageOutputWriter;
 import io.kaitai.struct.format.ClassSpec;
-import io.kaitai.struct.languages.JavaCompiler;
+import io.kaitai.struct.formats.JavaClassSpecs;
+import io.kaitai.struct.formats.JavaKSYParser;
 import io.kaitai.struct.languages.JavaCompiler$;
+
 import org.mdkt.compiler.InMemoryJavaCompiler;
 
-import javax.swing.*;
 import javax.swing.event.TreeExpansionEvent;
 import javax.swing.event.TreeSelectionEvent;
 import javax.swing.event.TreeSelectionListener;
@@ -19,40 +27,28 @@ import javax.swing.event.TreeWillExpandListener;
 import javax.swing.tree.DefaultTreeModel;
 import javax.swing.tree.ExpandVetoException;
 import javax.swing.tree.TreePath;
-import java.awt.*;
-import java.io.IOException;
-import java.lang.reflect.Field;
-import java.lang.reflect.Method;
-import java.util.ArrayList;
-import java.util.Map;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
+import javax.swing.JPanel;
+import javax.swing.JScrollPane;
+import javax.swing.JSplitPane;
+import javax.swing.JTree;
 
 public class VisualizerPanel extends JPanel {
-    private JTree tree;
-    private DefaultTreeModel model;
-    private HexLib hexEditor;
-    private JSplitPane splitPane;
+    private static final String DEST_PACKAGE = "io.kaitai.struct.visualized";
+    private static final Pattern TOP_CLASS_NAME = Pattern.compile("public class (.*?) extends KaitaiStruct");
+
+    private final JTree tree = new JTree();
+    private final DefaultTreeModel model = new DefaultTreeModel(null);
+    private final HexLib hexEditor = new HexLib(new byte[0]);
+    private final JSplitPane splitPane;
 
     private KaitaiStruct struct;
-    private Map<String, Integer> attrStart;
-    private Map<String, Integer> attrEnd;
 
     public VisualizerPanel() throws IOException {
         super();
-
-        initialize();
-    }
-
-    private void initialize() {
-        tree = new JTree();
-        hexEditor = new HexLib(new byte[] {});
-
         JScrollPane treeScroll = new JScrollPane(tree);
 
         splitPane = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, treeScroll, hexEditor);
 
-        model = new DefaultTreeModel(null);
         tree.setShowsRootHandles(true);
         KaitaiTreeListener treeListener = new KaitaiTreeListener();
         tree.addTreeWillExpandListener(treeListener);
@@ -60,13 +56,9 @@ public class VisualizerPanel extends JPanel {
         tree.setModel(model);
     }
 
-    public void loadAll(String dataFileName, String ksyFileName) {
-        try {
-            parseFileWithKSY(ksyFileName, dataFileName);
-            loadStruct();
-        } catch (Exception e) {
-            throw new RuntimeException(e);
-        }
+    public void loadAll(String dataFileName, String ksyFileName) throws Exception {
+        parseFileWithKSY(ksyFileName, dataFileName);
+        loadStruct();
     }
 
     private void loadStruct() throws IOException {
@@ -74,7 +66,7 @@ public class VisualizerPanel extends JPanel {
         byte[] buf = struct._io().readBytesFull();
         hexEditor.setByteContent(buf);
 
-        DataNode root = new DataNode(0, struct, null, "[root]");
+        final DataNode root = new DataNode(0, struct, "[root]");
         model.setRoot(root);
         root.explore(model /*, progressListener */, null);
     }
@@ -83,29 +75,30 @@ public class VisualizerPanel extends JPanel {
         return splitPane;
     }
 
-    public static final String DEST_PACKAGE = "io.kaitai.struct.visualized";
-
     /**
      * Compiles a given .ksy file into Java class source.
      * @param ksyFileName
      * @return Java class source code as a string
      */
     private static String compileKSY(String ksyFileName) {
-        ClassSpec cs = ClassCompiler.localFileToSpec(ksyFileName);
-        StringLanguageOutputWriter out = new StringLanguageOutputWriter(JavaCompiler$.MODULE$.indent());
-        RuntimeConfig config = new RuntimeConfig(
-                false,
-                true,
-                DEST_PACKAGE,
-                "",
-                ""
-        );
-        ClassCompiler cc = new ClassCompiler(cs, new JavaCompiler(config, out));
-        cc.compile();
-        return out.result();
-    }
+        final ClassSpec spec = JavaKSYParser.fileNameToSpec(ksyFileName);
+        final JavaClassSpecs specs = new JavaClassSpecs(null, null, spec);
 
-    private final static Pattern TOP_CLASS_NAME = Pattern.compile("public class (.*?) extends KaitaiStruct");
+        final RuntimeConfig config = new RuntimeConfig(
+            true, // debug - required for existing _attrStart/_attrEnd/_arrStart/_arrEnd fields
+            true, // opaqueTypes
+            null, // goPackage
+            DEST_PACKAGE,
+            "io.kaitai.struct.ByteBufferKaitaiStream",
+            null, // dotNetNamespace
+            null, // phpNamespace
+            null  // pythonPackage
+        );
+
+        Main.importAndPrecompile(specs, config).value();
+        final CompileLog.SpecSuccess result = Main.compile(specs, spec, JavaCompiler$.MODULE$, config);
+        return result.files().apply(0).contents();
+    }
 
     /**
      * Compiles Java source (given as a string) into bytecode and loads it into current JVM.
@@ -159,10 +152,10 @@ public class VisualizerPanel extends JPanel {
                 if (node.posStart() == null || node.posEnd() == null)
                     return;
                 HexLibSelectionModel select = hexEditor.getSelectionModel();
-                ArrayList<Point> intervals = new ArrayList<Point>();
+                ArrayList<Point> intervals = new ArrayList<>();
                 intervals.add(new Point(node.posStart(), node.posEnd()));
                 select.setSelectionIntervals(intervals);
-                System.out.println("" + node.posStart() + " - " + node.posEnd());
+                System.out.println(node.posStart() + " - " + node.posEnd());
             }
         }
     }

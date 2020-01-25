@@ -5,7 +5,7 @@ import java.io.IOException;
 
 public class MainWindow extends JFrame {
     private static final String APP_NAME = "Kaitai Struct Visualizer";
-    private static final String VERSION = "0.5";
+    private static final String VERSION = "0.8";
 
     private VisualizerPanel vis;
 
@@ -18,21 +18,9 @@ public class MainWindow extends JFrame {
         setVisible(true);
     }
 
-    public static void main(final String arg[]) throws IOException {
-        SwingUtilities.invokeLater(new Runnable() {
-            public void run() {
-                try {
-                    UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
-                    MainWindow mw = new MainWindow();
-                    mw.vis.loadAll(arg[0], arg[1]);
-                } catch (ClassNotFoundException |
-                        UnsupportedLookAndFeelException |
-                        IllegalAccessException |
-                        InstantiationException |
-                        IOException e) {
-                    e.printStackTrace();
-                }
-            }
-        });
+    public static void main(final String arg[]) throws Exception {
+        UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
+        MainWindow mw = new MainWindow();
+        mw.vis.loadAll(arg[0], arg[1]);
     }
 }
