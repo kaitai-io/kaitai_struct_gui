@@ -15,4 +15,6 @@ jobs:
       with:
         java-version: ${{ matrix.java }}
     - name: Build with Maven
-      run: mvn -B package --file pom.xml
+      run: |
+        mvn install:install-file -Dfile=lib/HexLib.jar -DgroupId=at.HexLib -DartifactId=HexLib -Dversion=0.0.0 -Dpackaging=jar -DlocalRepositoryPath=./lib
+        mvn -B package --file pom.xml
