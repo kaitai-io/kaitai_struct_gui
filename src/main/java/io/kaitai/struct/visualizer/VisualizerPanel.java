@@ -135,7 +135,7 @@ public class VisualizerPanel extends JPanel {
             paramNames.add(p.group(1));
         }
 
-        final Class<?> ksyClass = InMemoryJavaCompiler.compile(DEST_PACKAGE + "." + m.group(1), javaSrc);
+        final Class<?> ksyClass = InMemoryJavaCompiler.newInstance().compile(DEST_PACKAGE + "." + m.group(1), javaSrc);
         struct = construct(ksyClass, paramNames, binaryFileName);
 
         // Find and run "_read" that does actual parsing
