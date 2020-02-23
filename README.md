@@ -28,28 +28,10 @@ access to it in a nice, easy-to-comprehend API.
 ## Build
 Install java, maven and, if on windows, git-bash
 
-First, install dependencies into local maven repository:
-
-```bash
-mvn install:install-file -Dfile=lib/HexLib.jar -DgroupId=at.HexLib -DartifactId=HexLib -Dversion=0.0.0 -Dpackaging=jar -DlocalRepositoryPath=./lib
-```
-
-Then build project as usual:
+Run in console:
 
 ```bash
 mvn install
-```
-
-If you got error:
-```bash
-[WARNING] The POM for kaitai_struct_visualizer_java:HexLib:jar:0.0.0 is missing, no dependency information available
-```
-it means, that you already tried to build project without success and maven cache
-unsuccessful state of dependency resolution. Just add switch `-U` to maven invocation
-to force maven re-check dependencies:
-
-```bash
-$ mvn -U install
 ```
 
 ## Licensing
@@ -77,4 +59,4 @@ Vis tool depends on the following libraries:
 * [kaitai_struct_compiler](https://github.com/kaitai_struct_compiler) — GPLv3+ license
   * [fastparse](http://www.lihaoyi.com/fastparse/) — MIT license
   * [snakeyaml](https://bitbucket.org/asomov/snakeyaml) — Apache 2.0 license
-* [HexLib](http://hexedit-lib.sourceforge.net/) — FreeBSD license
+* [JHexView](https://github.com/Mingun/JHexView) — LGPL-2.1 license
