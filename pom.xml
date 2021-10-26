@@ -40,9 +40,9 @@
       <version>0.8</version>
     </dependency>
     <dependency>
-      <groupId>ru.mingun</groupId>
+      <groupId>com.github.Mingun</groupId>
       <artifactId>JHexView</artifactId>
-      <version>2.1</version>
+      <version>v2.1</version>
     </dependency>
     <dependency>
       <groupId>com.github.olivergondza</groupId>
@@ -113,9 +113,9 @@
     </repository>
     <repository>
       <!--JHexView-->
-      <id>bintray-mingun-maven</id>
-      <name>bintray</name>
-      <url>https://dl.bintray.com/mingun/maven</url>
+      <id>jitpack.io</id>
+      <name>jitpack.io</name>
+      <url>https://jitpack.io</url>
     </repository>
   </repositories>
 
