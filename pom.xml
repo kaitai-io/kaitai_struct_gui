@@ -40,9 +40,9 @@
       <version>0.8</version>
     </dependency>
     <dependency>
-      <groupId>ru.mingun</groupId>
+      <groupId>com.github.Mingun</groupId>
       <artifactId>JHexView</artifactId>
-      <version>2.1</version>
+      <version>v2.1</version>
     </dependency>
     <dependency>
       <groupId>com.github.olivergondza</groupId>
@@ -104,6 +104,16 @@
   <!-- Only to be enabled when using -SNAPSHOT components (compiler and/or runtime) -->
   <repositories>
     <repository>
+      <!--
+        jitpack.io contains invalid entry for scopt dependency that requires authorization.
+        Tell Maven to use Maven Central first
+        https://github.com/jitpack/jitpack.io/issues/4806
+      -->
+      <id>central</id>
+      <name>Maven Central</name>
+      <url>https://repo1.maven.org/maven2</url>
+    </repository>
+    <repository>
       <id>oss-sonatype</id>
       <name>oss-sonatype</name>
       <url>https://oss.sonatype.org/content/repositories/snapshots/</url>
@@ -113,9 +123,9 @@
     </repository>
     <repository>
       <!--JHexView-->
-      <id>bintray-mingun-maven</id>
-      <name>bintray</name>
-      <url>https://dl.bintray.com/mingun/maven</url>
+      <id>jitpack.io</id>
+      <name>jitpack.io</name>
+      <url>https://jitpack.io</url>
     </repository>
   </repositories>
 
