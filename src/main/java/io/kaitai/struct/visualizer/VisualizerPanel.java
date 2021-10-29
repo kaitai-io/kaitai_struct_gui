@@ -12,6 +12,7 @@ import java.util.regex.Pattern;
 
 import io.kaitai.struct.ByteBufferKaitaiStream;
 import io.kaitai.struct.CompileLog;
+import io.kaitai.struct.JavaRuntimeConfig;
 import io.kaitai.struct.KaitaiStream;
 import io.kaitai.struct.KaitaiStruct;
 import io.kaitai.struct.Main;
@@ -39,6 +40,7 @@ import tv.porst.jhexview.JHexView;
 import tv.porst.jhexview.SimpleDataProvider;
 
 public class VisualizerPanel extends JPanel {
+    /** Package to generate classes in. */
     private static final String DEST_PACKAGE = "io.kaitai.struct.visualized";
     /**
      * Regexp with 2 groups: class name and type parameters. Type parameters
@@ -127,14 +129,23 @@ public class VisualizerPanel extends JPanel {
         final JavaClassSpecs specs = new JavaClassSpecs(null, null, spec);
 
         final RuntimeConfig config = new RuntimeConfig(
-            true, // debug - required for existing _attrStart/_attrEnd/_arrStart/_arrEnd fields
+            false,// autoRead - do not call `_read` automatically in constructor
+            true, // readStoresPos - enable generation of a position info which is accessed in DebugAids later
             true, // opaqueTypes
+            null, // cppConfig
             null, // goPackage
-            DEST_PACKAGE,
-            "io.kaitai.struct.ByteBufferKaitaiStream",
+            new JavaRuntimeConfig(
+                DEST_PACKAGE,
+                // Class to be invoked in `fromFile` helper methods
+                "io.kaitai.struct.ByteBufferKaitaiStream",
+                // Exception class expected to be thrown on end-of-stream errors
+                "java.nio.BufferUnderflowException"
+            ),
             null, // dotNetNamespace
             null, // phpNamespace
-            null  // pythonPackage
+            null, // pythonPackage
+            null, // nimModule
+            null  // nimOpaque
         );
 
         Main.importAndPrecompile(specs, config).value();
