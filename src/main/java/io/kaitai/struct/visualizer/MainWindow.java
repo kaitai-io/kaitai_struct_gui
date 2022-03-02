@@ -1,5 +1,7 @@
 package io.kaitai.struct.visualizer;
 
+import io.kaitai.struct.ByteBufferKaitaiStream;
+
 import javax.swing.*;
 import java.io.IOException;
 
@@ -21,6 +23,13 @@ public class MainWindow extends JFrame {
     public static void main(final String arg[]) throws Exception {
         UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
         MainWindow mw = new MainWindow();
-        mw.vis.loadAll(arg[0], arg[1]);
+
+
+        if (arg.length == 2) {
+            String binaryFileToParse = arg[0];
+            String ksyFileName = arg[1];
+            KaitaiStreamSupplier streamSupplier = () -> new ByteBufferKaitaiStream(binaryFileToParse);
+            mw.vis.loadAll(streamSupplier, ksyFileName);
+        }
     }
 }

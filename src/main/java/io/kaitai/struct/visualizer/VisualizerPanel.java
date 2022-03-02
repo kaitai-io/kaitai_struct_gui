@@ -10,7 +10,6 @@ import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import io.kaitai.struct.ByteBufferKaitaiStream;
 import io.kaitai.struct.CompileLog;
 import io.kaitai.struct.JavaRuntimeConfig;
 import io.kaitai.struct.KaitaiStream;
@@ -99,8 +98,8 @@ public class VisualizerPanel extends JPanel {
         tree.setModel(model);
     }
 
-    public void loadAll(String dataFileName, String ksyFileName) throws Exception {
-        parseFileWithKSY(ksyFileName, dataFileName);
+    public void loadAll(KaitaiStreamSupplier streamToParse, String ksyFileName) throws Exception {
+        parseFileWithKSY(ksyFileName, streamToParse);
         loadStruct();
     }
 
@@ -155,12 +154,9 @@ public class VisualizerPanel extends JPanel {
 
     /**
      * Compiles Java source (given as a string) into bytecode and loads it into current JVM.
-     * @param javaSrc Java source as a string
-     * @return Class reference, which can be used to instantiate the class, call its
-     * static methods, etc.
      * @throws Exception
      */
-    private void parseFileWithKSY(String ksyFileName, String binaryFileName) throws Exception {
+    private void parseFileWithKSY(String ksyFileName, KaitaiStreamSupplier streamToParse) throws Exception {
         final String javaSrc = compileKSY(ksyFileName);
         final Matcher m = TOP_CLASS_NAME_AND_PARAMETERS.matcher(javaSrc);
         if (!m.find()) {
@@ -174,18 +170,18 @@ public class VisualizerPanel extends JPanel {
         }
 
         final Class<?> ksyClass = InMemoryJavaCompiler.newInstance().compile(DEST_PACKAGE + "." + m.group(1), javaSrc);
-        struct = construct(ksyClass, paramNames, binaryFileName);
+        struct = construct(ksyClass, paramNames, streamToParse);
 
         // Find and run "_read" that does actual parsing
         // TODO: wrap this in try-catch block
         Method readMethod = ksyClass.getMethod("_read");
         readMethod.invoke(struct);
     }
-    private static KaitaiStruct construct(Class<?> ksyClass, List<String> paramNames, String binaryFileName) throws Exception {
+    private static KaitaiStruct construct(Class<?> ksyClass, List<String> paramNames, KaitaiStreamSupplier streamToParse) throws Exception {
         final Constructor<?> c = findConstructor(ksyClass);
         final Class<?>[] types = c.getParameterTypes();
         final Object[] args = new Object[types.length];
-        args[0] = new ByteBufferKaitaiStream(binaryFileName);
+        args[0] = streamToParse.getStream();
         for (int i = 3; i < args.length; ++i) {
             args[i] = getDefaultValue(types[i]);
         }
