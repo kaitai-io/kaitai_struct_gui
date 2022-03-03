@@ -16,7 +16,9 @@ import io.kaitai.struct.KaitaiStream;
 import io.kaitai.struct.KaitaiStruct;
 import io.kaitai.struct.Main;
 import io.kaitai.struct.RuntimeConfig;
+import io.kaitai.struct.Version;
 import io.kaitai.struct.format.ClassSpec;
+import io.kaitai.struct.format.KSVersion;
 import io.kaitai.struct.formats.JavaClassSpecs;
 import io.kaitai.struct.formats.JavaKSYParser;
 import io.kaitai.struct.languages.JavaCompiler$;
@@ -124,6 +126,7 @@ public class VisualizerPanel extends JPanel {
      * @return Java class source code as a string
      */
     private static String compileKSY(String ksyFileName) {
+        KSVersion.current_$eq(Version.version());
         final ClassSpec spec = JavaKSYParser.fileNameToSpec(ksyFileName);
         final JavaClassSpecs specs = new JavaClassSpecs(null, null, spec);
 
