@@ -100,7 +100,7 @@ public class VisualizerPanel extends JPanel {
         tree.setModel(model);
     }
 
-    public void loadAll(KaitaiStreamSupplier streamToParse, String ksyFileName) throws Exception {
+    public void loadAll(KaitaiStream streamToParse, String ksyFileName) throws Exception {
         parseFileWithKSY(ksyFileName, streamToParse);
         loadStruct();
     }
@@ -159,7 +159,7 @@ public class VisualizerPanel extends JPanel {
      * Compiles Java source (given as a string) into bytecode and loads it into current JVM.
      * @throws Exception
      */
-    private void parseFileWithKSY(String ksyFileName, KaitaiStreamSupplier streamToParse) throws Exception {
+    private void parseFileWithKSY(String ksyFileName, KaitaiStream streamToParse) throws Exception {
         final String javaSrc = compileKSY(ksyFileName);
         final Matcher m = TOP_CLASS_NAME_AND_PARAMETERS.matcher(javaSrc);
         if (!m.find()) {
@@ -180,11 +180,11 @@ public class VisualizerPanel extends JPanel {
         Method readMethod = ksyClass.getMethod("_read");
         readMethod.invoke(struct);
     }
-    private static KaitaiStruct construct(Class<?> ksyClass, List<String> paramNames, KaitaiStreamSupplier streamToParse) throws Exception {
+    private static KaitaiStruct construct(Class<?> ksyClass, List<String> paramNames, KaitaiStream streamToParse) throws Exception {
         final Constructor<?> c = findConstructor(ksyClass);
         final Class<?>[] types = c.getParameterTypes();
         final Object[] args = new Object[types.length];
-        args[0] = streamToParse.getStream();
+        args[0] = streamToParse;
         for (int i = 3; i < args.length; ++i) {
             args[i] = getDefaultValue(types[i]);
         }

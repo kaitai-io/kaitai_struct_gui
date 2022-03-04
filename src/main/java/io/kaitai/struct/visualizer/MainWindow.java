@@ -28,8 +28,7 @@ public class MainWindow extends JFrame {
         if (arg.length == 2) {
             String binaryFileToParse = arg[0];
             String ksyFileName = arg[1];
-            KaitaiStreamSupplier streamSupplier = () -> new ByteBufferKaitaiStream(binaryFileToParse);
-            mw.vis.loadAll(streamSupplier, ksyFileName);
+            mw.vis.loadAll(new ByteBufferKaitaiStream(binaryFileToParse), ksyFileName);
         }
     }
 }
