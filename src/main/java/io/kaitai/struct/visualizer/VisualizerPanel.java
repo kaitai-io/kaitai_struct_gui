@@ -172,47 +172,74 @@ public class VisualizerPanel extends JPanel {
      */
     private void parseFileWithKSY(String ksyFileName, KaitaiStream streamToParse) throws Exception {
         final String javaSrc = compileKSY(ksyFileName);
-        final Matcher m = TOP_CLASS_NAME_AND_PARAMETERS.matcher(javaSrc);
-        if (!m.find()) {
+        final Matcher matcher = TOP_CLASS_NAME_AND_PARAMETERS.matcher(javaSrc);
+        if (!matcher.find()) {
             throw new RuntimeException("Unable to find top-level class in generated .java");
         }
         // Parse parameter names
         final ArrayList<String> paramNames = new ArrayList<>();
-        final Matcher p = PARAMETER_NAME.matcher(m.group(2));
+        final Matcher p = PARAMETER_NAME.matcher(matcher.group(2));
         while (p.find()) {
             paramNames.add(p.group(1));
         }
 
-        final Class<?> ksyClass = InMemoryJavaCompiler.newInstance().compile(DEST_PACKAGE + "." + m.group(1), javaSrc);
-        kaitaiStruct = getKaitaiStructInstance(ksyClass, paramNames, streamToParse);
+        final Class<?> ksyClassWithWildcardType = InMemoryJavaCompiler.newInstance().compile(DEST_PACKAGE + "." + matcher.group(1), javaSrc);
+
+        /*
+        if (!ksyClassWithWildcardType.isAssignableFrom(KaitaiStruct.class)) {
+            throw new Exception("compilation created a class that is not a subclass of KaitaiStruct!");
+        }
+        final Class<? extends KaitaiStruct> ksyClass;
+        try {
+            ksyClass = (Class<? extends KaitaiStruct>) ksyClassWithWildcardType;
+        } catch (ClassCastException ex) {
+            throw new Exception("failed to cast " + ksyClassWithWildcardType + "?!", ex);
+        }
+         */
+
+        kaitaiStruct = getKaitaiStructInstance(ksyClassWithWildcardType, paramNames, streamToParse);
 
         // Find and run "_read" that does actual parsing
         // TODO: wrap this in try-catch block
-        Method readMethod = ksyClass.getMethod("_read");
+        Method readMethod = ksyClassWithWildcardType.getMethod("_read");
         readMethod.invoke(kaitaiStruct);
     }
 
     private static KaitaiStruct getKaitaiStructInstance(Class<?> ksyClass, List<String> paramNames, KaitaiStream streamToParse) throws Exception {
-        final Constructor<?> c = findConstructor(ksyClass);
-        final Class<?>[] types = c.getParameterTypes();
-        final Object[] args = new Object[types.length];
-        args[0] = streamToParse;
-        for (int i = 3; i < args.length; ++i) {
-            args[i] = getDefaultValue(types[i]);
+        final Constructor<?> ctor = findConstructor(ksyClass);
+        final Class<?>[] types = ctor.getParameterTypes();
+        final Object[] argsToPassIntoConstructor = new Object[types.length];
+        argsToPassIntoConstructor[0] = streamToParse;
+        for (int i = 3; i < argsToPassIntoConstructor.length; ++i) {
+            argsToPassIntoConstructor[i] = getDefaultValue(types[i]);
         }
         // TODO: get parameters from user
-        return (KaitaiStruct) c.newInstance(args);
+        return (KaitaiStruct) ctor.newInstance(argsToPassIntoConstructor);
     }
 
     private static <T> Constructor<T> findConstructor(Class<T> ksyClass) {
-        for (final Constructor c : ksyClass.getDeclaredConstructors()) {
-            final Class<?>[] types = c.getParameterTypes();
+        /*
+          For some reason, getConstructors() (plural) returns a Constructor<?> but
+          getConstructor() (singular) returns an array of Constructor<T>.
+          https://docs.oracle.com/javase/8/docs/api/java/lang/Class.html
+          Later I might try using the user param types
+         */
+        /*
+         The getConstructors() method only returns public constructors.
+         The getDeclaredConstructors() method returns all constructors (private, etc).
+         See https://stackoverflow.com/a/8249415/7376577.
+
+         The TOP_CLASS_NAME_AND_PARAMETERS regex searches for a public constructor,
+         so we can use getConstructors().
+         */
+        for (final Constructor ctor : ksyClass.getDeclaredConstructors()) {
+            final Class<?>[] types = ctor.getParameterTypes();
             if (types.length >= 3
                     && types[0] == KaitaiStream.class
                     && types[1] == KaitaiStruct.class
                     && types[2] == ksyClass
             ) {
-                return c;
+                return ctor;
             }
         }
         throw new IllegalArgumentException(ksyClass + " has no KaitaiStruct-generated constructor");
@@ -228,6 +255,12 @@ public class VisualizerPanel extends JPanel {
         if (clazz == float.class) return 0.0f;
         if (clazz == double.class) return 0.0;
         return null;
+    }
+
+    private static Class<?> getClassForParamType(String paramType){
+        switch (paramType){
+            case ""
+        }
     }
 
     public class KaitaiTreeListener implements TreeWillExpandListener, TreeSelectionListener {
