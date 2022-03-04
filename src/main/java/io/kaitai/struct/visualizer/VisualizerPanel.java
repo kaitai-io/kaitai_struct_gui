@@ -2,7 +2,6 @@ package io.kaitai.struct.visualizer;
 
 import java.awt.Color;
 import java.awt.Font;
-import java.io.IOException;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
@@ -73,11 +72,11 @@ public class VisualizerPanel extends JPanel {
     private static final Color SELECTION = new Color(0xc0c0c0);
 
     private final JTree tree = new JTree();
-    private final DefaultTreeModel model = new DefaultTreeModel(null);
+    private final DefaultTreeModel treeModel = new DefaultTreeModel(null);
     private final JHexView hexEditor = new JHexView();
     private final JSplitPane splitPane;
 
-    private KaitaiStruct struct;
+    private KaitaiStruct kaitaiStruct;
 
     public VisualizerPanel() {
         super();
@@ -107,23 +106,23 @@ public class VisualizerPanel extends JPanel {
         KaitaiTreeListener treeListener = new KaitaiTreeListener();
         tree.addTreeWillExpandListener(treeListener);
         tree.addTreeSelectionListener(treeListener);
-        tree.setModel(model);
+        tree.setModel(treeModel);
     }
 
     public void loadAll(KaitaiStream streamToParse, String ksyFileName) throws Exception {
         parseFileWithKSY(ksyFileName, streamToParse);
-        loadStruct();
+        loadKaitaiStruct();
     }
 
-    private void loadStruct() throws IOException {
-        struct._io().seek(0);
-        byte[] buf = struct._io().readBytesFull();
+    private void loadKaitaiStruct() {
+        kaitaiStruct._io().seek(0);
+        byte[] buf = kaitaiStruct._io().readBytesFull();
         hexEditor.setData(new SimpleDataProvider(buf));
         hexEditor.setDefinitionStatus(JHexView.DefinitionStatus.DEFINED);
 
-        final DataNode root = new DataNode(0, struct, "[root]");
-        model.setRoot(root);
-        root.explore(model /*, progressListener */, null);
+        final DataNode root = new DataNode(0, kaitaiStruct, "[root]");
+        treeModel.setRoot(root);
+        root.explore(treeModel /*, progressListener */, null);
     }
 
     public JSplitPane getSplitPane() {
@@ -185,15 +184,15 @@ public class VisualizerPanel extends JPanel {
         }
 
         final Class<?> ksyClass = InMemoryJavaCompiler.newInstance().compile(DEST_PACKAGE + "." + m.group(1), javaSrc);
-        struct = construct(ksyClass, paramNames, streamToParse);
+        kaitaiStruct = getKaitaiStructInstance(ksyClass, paramNames, streamToParse);
 
         // Find and run "_read" that does actual parsing
         // TODO: wrap this in try-catch block
         Method readMethod = ksyClass.getMethod("_read");
-        readMethod.invoke(struct);
+        readMethod.invoke(kaitaiStruct);
     }
 
-    private static KaitaiStruct construct(Class<?> ksyClass, List<String> paramNames, KaitaiStream streamToParse) throws Exception {
+    private static KaitaiStruct getKaitaiStructInstance(Class<?> ksyClass, List<String> paramNames, KaitaiStream streamToParse) throws Exception {
         final Constructor<?> c = findConstructor(ksyClass);
         final Class<?>[] types = c.getParameterTypes();
         final Object[] args = new Object[types.length];
@@ -204,7 +203,7 @@ public class VisualizerPanel extends JPanel {
         // TODO: get parameters from user
         return (KaitaiStruct) c.newInstance(args);
     }
-    
+
     private static <T> Constructor<T> findConstructor(Class<T> ksyClass) {
         for (final Constructor c : ksyClass.getDeclaredConstructors()) {
             final Class<?>[] types = c.getParameterTypes();
@@ -237,7 +236,7 @@ public class VisualizerPanel extends JPanel {
             TreePath path = event.getPath();
             if (path.getLastPathComponent() instanceof DataNode) {
                 DataNode node = (DataNode) path.getLastPathComponent();
-                node.explore(model /* , progressListener */, null);
+                node.explore(treeModel /* , progressListener */, null);
             }
         }
 
