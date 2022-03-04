@@ -69,7 +69,7 @@ public class VisualizerPanel extends JPanel {
 
     private KaitaiStruct struct;
 
-    public VisualizerPanel() throws IOException {
+    public VisualizerPanel() {
         super();
         JScrollPane treeScroll = new JScrollPane(tree);
 
