@@ -31,7 +31,7 @@ public class MainWindow extends JFrame {
         GridBagConstraints gbc = new GridBagConstraints();
         gbc.fill = GridBagConstraints.NONE;
         gbc.weightx = 0.0;
-        gbc.insets = new Insets(2,5,2,5);
+        gbc.insets = new Insets(2, 5, 2, 5);
         gbc.gridy = 0;
         gbc.gridx = 0;
         fileChooserPanel.add(new JLabel("KSY grammar file:"), gbc);

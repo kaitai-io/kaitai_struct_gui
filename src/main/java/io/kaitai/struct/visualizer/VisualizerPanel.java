@@ -41,25 +41,35 @@ import tv.porst.jhexview.JHexView;
 import tv.porst.jhexview.SimpleDataProvider;
 
 public class VisualizerPanel extends JPanel {
-    /** Package to generate classes in. */
+    /**
+     * Package to generate classes in.
+     */
     private static final String DEST_PACKAGE = "io.kaitai.struct.visualized";
     /**
      * Regexp with 2 groups: class name and type parameters. Type parameters
      * must be parsed with {@link #PARAMETER_NAME}.
      */
     private static final Pattern TOP_CLASS_NAME_AND_PARAMETERS = Pattern.compile(
-        "public class (.+?) extends KaitaiStruct.*" +
-        "public \\1\\(KaitaiStream _io, KaitaiStruct _parent, \\1 _root(.*?)\\)",
-        Pattern.DOTALL
+            "public class (.+?) extends KaitaiStruct.*" +
+                    "public \\1\\(KaitaiStream _io, KaitaiStruct _parent, \\1 _root(.*?)\\)",
+            Pattern.DOTALL
     );
-    /** Regexp, used to get parameter names from the generated source. */
+    /**
+     * Regexp, used to get parameter names from the generated source.
+     */
     private static final Pattern PARAMETER_NAME = Pattern.compile(", \\S+ ([^,\\s]+)");
 
-    /** Color of hex editor section headers. */
+    /**
+     * Color of hex editor section headers.
+     */
     private static final Color HEADER = new Color(0x0000c0);
-    /** Color of hex data in HEX and ASCII sections. */
+    /**
+     * Color of hex data in HEX and ASCII sections.
+     */
     private static final Color UNMODIFIED = Color.BLACK;
-    /** Background color selected hex data in HEX and ASCII sections. */
+    /**
+     * Background color selected hex data in HEX and ASCII sections.
+     */
     private static final Color SELECTION = new Color(0xc0c0c0);
 
     private final JTree tree = new JTree();
@@ -122,6 +132,7 @@ public class VisualizerPanel extends JPanel {
 
     /**
      * Compiles a given .ksy file into Java class source.
+     *
      * @param ksyFileName
      * @return Java class source code as a string
      */
@@ -131,23 +142,23 @@ public class VisualizerPanel extends JPanel {
         final JavaClassSpecs specs = new JavaClassSpecs(null, null, spec);
 
         final RuntimeConfig config = new RuntimeConfig(
-            false,// autoRead - do not call `_read` automatically in constructor
-            true, // readStoresPos - enable generation of a position info which is accessed in DebugAids later
-            true, // opaqueTypes
-            null, // cppConfig
-            null, // goPackage
-            new JavaRuntimeConfig(
-                DEST_PACKAGE,
-                // Class to be invoked in `fromFile` helper methods
-                "io.kaitai.struct.ByteBufferKaitaiStream",
-                // Exception class expected to be thrown on end-of-stream errors
-                "java.nio.BufferUnderflowException"
-            ),
-            null, // dotNetNamespace
-            null, // phpNamespace
-            null, // pythonPackage
-            null, // nimModule
-            null  // nimOpaque
+                false,// autoRead - do not call `_read` automatically in constructor
+                true, // readStoresPos - enable generation of a position info which is accessed in DebugAids later
+                true, // opaqueTypes
+                null, // cppConfig
+                null, // goPackage
+                new JavaRuntimeConfig(
+                        DEST_PACKAGE,
+                        // Class to be invoked in `fromFile` helper methods
+                        "io.kaitai.struct.ByteBufferKaitaiStream",
+                        // Exception class expected to be thrown on end-of-stream errors
+                        "java.nio.BufferUnderflowException"
+                ),
+                null, // dotNetNamespace
+                null, // phpNamespace
+                null, // pythonPackage
+                null, // nimModule
+                null  // nimOpaque
         );
 
         Main.importAndPrecompile(specs, config).value();
@@ -157,6 +168,7 @@ public class VisualizerPanel extends JPanel {
 
     /**
      * Compiles Java source (given as a string) into bytecode and loads it into current JVM.
+     *
      * @throws Exception
      */
     private void parseFileWithKSY(String ksyFileName, KaitaiStream streamToParse) throws Exception {
@@ -180,6 +192,7 @@ public class VisualizerPanel extends JPanel {
         Method readMethod = ksyClass.getMethod("_read");
         readMethod.invoke(struct);
     }
+
     private static KaitaiStruct construct(Class<?> ksyClass, List<String> paramNames, KaitaiStream streamToParse) throws Exception {
         final Constructor<?> c = findConstructor(ksyClass);
         final Class<?>[] types = c.getParameterTypes();
@@ -189,30 +202,32 @@ public class VisualizerPanel extends JPanel {
             args[i] = getDefaultValue(types[i]);
         }
         // TODO: get parameters from user
-        return (KaitaiStruct)c.newInstance(args);
+        return (KaitaiStruct) c.newInstance(args);
     }
+    
     private static <T> Constructor<T> findConstructor(Class<T> ksyClass) {
         for (final Constructor c : ksyClass.getDeclaredConstructors()) {
             final Class<?>[] types = c.getParameterTypes();
             if (types.length >= 3
-             && types[0] == KaitaiStream.class
-             && types[1] == KaitaiStruct.class
-             && types[2] == ksyClass
+                    && types[0] == KaitaiStream.class
+                    && types[1] == KaitaiStruct.class
+                    && types[2] == ksyClass
             ) {
                 return c;
             }
         }
         throw new IllegalArgumentException(ksyClass + " has no KaitaiStruct-generated constructor");
     }
+
     private static Object getDefaultValue(Class<?> clazz) {
         if (clazz == boolean.class) return false;
-        if (clazz == char.class   ) return (char)0;
-        if (clazz == byte.class   ) return (byte)0;
-        if (clazz == short.class  ) return (short)0;
-        if (clazz == int.class    ) return 0;
-        if (clazz == long.class   ) return 0L;
-        if (clazz == float.class  ) return 0.0f;
-        if (clazz == double.class ) return 0.0;
+        if (clazz == char.class) return (char) 0;
+        if (clazz == byte.class) return (byte) 0;
+        if (clazz == short.class) return (short) 0;
+        if (clazz == int.class) return 0;
+        if (clazz == long.class) return 0L;
+        if (clazz == float.class) return 0.0f;
+        if (clazz == double.class) return 0.0;
         return null;
     }
 
@@ -237,12 +252,12 @@ public class VisualizerPanel extends JPanel {
                 final Object selected = path.getLastPathComponent();
                 if (!(selected instanceof DataNode)) continue;
 
-                final DataNode node = (DataNode)selected;
+                final DataNode node = (DataNode) selected;
                 final Integer start = node.posStart();
-                final Integer end   = node.posEnd();
+                final Integer end = node.posEnd();
                 if (start == null || end == null) continue;
                 // Selection in nibbles, so multiply by 2
-                hexEditor.getSelectionModel().addSelectionInterval(2*start, 2*end-1);
+                hexEditor.getSelectionModel().addSelectionInterval(2 * start, 2 * end - 1);
             }
         }
     }
