@@ -1,14 +1,6 @@
 package io.kaitai.struct.visualizer;
 
-import java.awt.Color;
-import java.awt.Font;
-import java.lang.reflect.Constructor;
-import java.lang.reflect.Method;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
-
+import io.kaitai.struct.ByteBufferKaitaiStream;
 import io.kaitai.struct.CompileLog;
 import io.kaitai.struct.JavaRuntimeConfig;
 import io.kaitai.struct.KaitaiStream;
@@ -21,9 +13,11 @@ import io.kaitai.struct.format.KSVersion;
 import io.kaitai.struct.formats.JavaClassSpecs;
 import io.kaitai.struct.formats.JavaKSYParser;
 import io.kaitai.struct.languages.JavaCompiler$;
-
 import org.mdkt.compiler.InMemoryJavaCompiler;
+import tv.porst.jhexview.JHexView;
+import tv.porst.jhexview.SimpleDataProvider;
 
+import javax.swing.*;
 import javax.swing.event.TreeExpansionEvent;
 import javax.swing.event.TreeSelectionEvent;
 import javax.swing.event.TreeSelectionListener;
@@ -31,13 +25,12 @@ import javax.swing.event.TreeWillExpandListener;
 import javax.swing.tree.DefaultTreeModel;
 import javax.swing.tree.ExpandVetoException;
 import javax.swing.tree.TreePath;
-import javax.swing.JPanel;
-import javax.swing.JScrollPane;
-import javax.swing.JSplitPane;
-import javax.swing.JTree;
-
-import tv.porst.jhexview.JHexView;
-import tv.porst.jhexview.SimpleDataProvider;
+import java.awt.*;
+import java.lang.reflect.Constructor;
+import java.lang.reflect.Method;
+import java.util.ArrayList;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 public class VisualizerPanel extends JPanel {
     /**
@@ -56,7 +49,7 @@ public class VisualizerPanel extends JPanel {
     /**
      * Regexp, used to get parameter names from the generated source.
      */
-    private static final Pattern PARAMETER_NAME = Pattern.compile(", \\S+ ([^,\\s]+)");
+    private static final Pattern PARAMETER_NAME = Pattern.compile(", (\\S+) ([^,\\s]+)");
 
     /**
      * Color of hex editor section headers.
@@ -76,7 +69,9 @@ public class VisualizerPanel extends JPanel {
     private final JHexView hexEditor = new JHexView();
     private final JSplitPane splitPane;
 
-    private KaitaiStruct kaitaiStruct;
+    private ByteBufferKaitaiStream streamToParse;
+    private Class<? extends KaitaiStruct> ksClass;
+    private KaitaiStruct ksInstance;
 
     public VisualizerPanel() {
         super();
@@ -101,6 +96,7 @@ public class VisualizerPanel extends JPanel {
         hexEditor.setBackgroundColorAsciiView(hexEditor.getBackground());
 
         splitPane = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, treeScroll, hexEditor);
+        splitPane.setDividerLocation(200);
 
         tree.setShowsRootHandles(true);
         KaitaiTreeListener treeListener = new KaitaiTreeListener();
@@ -109,18 +105,41 @@ public class VisualizerPanel extends JPanel {
         tree.setModel(treeModel);
     }
 
-    public void loadAll(KaitaiStream streamToParse, String ksyFileName) throws Exception {
-        parseFileWithKSY(ksyFileName, streamToParse);
+    public void setStreamToParse(ByteBufferKaitaiStream stream) throws Exception {
+        streamToParse = stream;
+        if (ksClass != null) {
+            go();
+        }
+    }
+
+    public void setKsyFile(String ksyFileName) throws Exception {
+        ksClass = compileKsyFileToJavaClass(ksyFileName);
+        if (ksClass != null) {
+            go();
+        }
+    }
+
+    private void go() throws Exception {
+        ksInstance = getKaitaiStructInstance(ksClass, streamToParse);
+        invokeReadMethod();
         loadKaitaiStruct();
     }
 
+    /*
+    public void loadAll(ByteBufferKaitaiStream streamToParse, String ksyFileName) throws Exception {
+        this.streamToParse = streamToParse;
+        ksClass = compileKsyFileToJavaClass(ksyFileName);
+        go();
+    }
+     */
+
     private void loadKaitaiStruct() {
-        kaitaiStruct._io().seek(0);
-        byte[] buf = kaitaiStruct._io().readBytesFull();
+        ksInstance._io().seek(0);
+        byte[] buf = ksInstance._io().readBytesFull();
         hexEditor.setData(new SimpleDataProvider(buf));
         hexEditor.setDefinitionStatus(JHexView.DefinitionStatus.DEFINED);
 
-        final DataNode root = new DataNode(0, kaitaiStruct, "[root]");
+        final DataNode root = new DataNode(0, ksInstance, "[root]");
         treeModel.setRoot(root);
         root.explore(treeModel /*, progressListener */, null);
     }
@@ -135,7 +154,7 @@ public class VisualizerPanel extends JPanel {
      * @param ksyFileName
      * @return Java class source code as a string
      */
-    private static String compileKSY(String ksyFileName) {
+    private static String compileKsyFileToJavaSource(String ksyFileName) {
         KSVersion.current_$eq(Version.version());
         final ClassSpec spec = JavaKSYParser.fileNameToSpec(ksyFileName);
         final JavaClassSpecs specs = new JavaClassSpecs(null, null, spec);
@@ -165,47 +184,56 @@ public class VisualizerPanel extends JPanel {
         return result.files().apply(0).contents();
     }
 
-    /**
-     * Compiles Java source (given as a string) into bytecode and loads it into current JVM.
-     *
-     * @throws Exception
-     */
-    private void parseFileWithKSY(String ksyFileName, KaitaiStream streamToParse) throws Exception {
-        final String javaSrc = compileKSY(ksyFileName);
-        final Matcher matcher = TOP_CLASS_NAME_AND_PARAMETERS.matcher(javaSrc);
-        if (!matcher.find()) {
-            throw new RuntimeException("Unable to find top-level class in generated .java");
-        }
-        // Parse parameter names
-        final ArrayList<String> paramNames = new ArrayList<>();
-        final Matcher p = PARAMETER_NAME.matcher(matcher.group(2));
-        while (p.find()) {
-            paramNames.add(p.group(1));
+    private Class<? extends KaitaiStruct> compileJavaSourceToJavaClass(String javaSrc, String className) throws Exception {
+        String fullyQualifiedClassName = DEST_PACKAGE + "." + className;
+        final Class<?> ksyClassWithWildcardType = InMemoryJavaCompiler.newInstance().compile(fullyQualifiedClassName, javaSrc);
+
+        if (!KaitaiStruct.class.isAssignableFrom(ksyClassWithWildcardType)) {
+            throw new Exception(String.format(
+                    "the compiled class is not assignable from \"%s\". The compiled class is \"%s\", and the superclass is \"%s\".",
+                    KaitaiStruct.class, ksyClassWithWildcardType, ksyClassWithWildcardType.getSuperclass()
+            ));
         }
 
-        final Class<?> ksyClassWithWildcardType = InMemoryJavaCompiler.newInstance().compile(DEST_PACKAGE + "." + matcher.group(1), javaSrc);
-
-        /*
-        if (!ksyClassWithWildcardType.isAssignableFrom(KaitaiStruct.class)) {
-            throw new Exception("compilation created a class that is not a subclass of KaitaiStruct!");
-        }
-        final Class<? extends KaitaiStruct> ksyClass;
-        try {
-            ksyClass = (Class<? extends KaitaiStruct>) ksyClassWithWildcardType;
-        } catch (ClassCastException ex) {
-            throw new Exception("failed to cast " + ksyClassWithWildcardType + "?!", ex);
-        }
-         */
-
-        kaitaiStruct = getKaitaiStructInstance(ksyClassWithWildcardType, paramNames, streamToParse);
-
-        // Find and run "_read" that does actual parsing
-        // TODO: wrap this in try-catch block
-        Method readMethod = ksyClassWithWildcardType.getMethod("_read");
-        readMethod.invoke(kaitaiStruct);
+        // If the isAssignableFrom check passed, I think this unchecked cast should work.
+        return (Class<? extends KaitaiStruct>) ksyClassWithWildcardType;
     }
 
-    private static KaitaiStruct getKaitaiStructInstance(Class<?> ksyClass, List<String> paramNames, KaitaiStream streamToParse) throws Exception {
+    private void invokeReadMethod() throws ReflectiveOperationException {
+        // Find and run "_read" that does actual parsing
+        Method readMethod = ksClass.getMethod("_read");
+        readMethod.invoke(ksInstance);
+    }
+
+    private Class<? extends KaitaiStruct> compileKsyFileToJavaClass(String ksyFileName) throws Exception {
+
+        String javaSrc = compileKsyFileToJavaSource(ksyFileName);
+
+        final Matcher topMatcher = TOP_CLASS_NAME_AND_PARAMETERS.matcher(javaSrc);
+        if (!topMatcher.find()) {
+            throw new RuntimeException("Unable to find top-level class in generated .java");
+        }
+        // Parse user params
+        // group at index zero is the whole match
+        String className = topMatcher.group(1);
+
+        //TODO: get the user params out of this method and into parseFileWithKSY
+        String paramsToParse = topMatcher.group(2);
+        final ArrayList<String> paramNames = new ArrayList<>();
+        final ArrayList<String> paramTypes = new ArrayList<>();
+        final Matcher paramMatcher = PARAMETER_NAME.matcher(paramsToParse);
+        while (paramMatcher.find()) {
+            // group at index zero is the whole match
+            paramTypes.add(paramMatcher.group(1));
+            paramNames.add(paramMatcher.group(2));
+        }
+
+        return compileJavaSourceToJavaClass(javaSrc, className);
+
+
+    }
+
+    private static KaitaiStruct getKaitaiStructInstance(Class<?> ksyClass, /*List<String> paramNames,*/ ByteBufferKaitaiStream streamToParse) throws Exception {
         final Constructor<?> ctor = findConstructor(ksyClass);
         final Class<?>[] types = ctor.getParameterTypes();
         final Object[] argsToPassIntoConstructor = new Object[types.length];
@@ -255,12 +283,6 @@ public class VisualizerPanel extends JPanel {
         if (clazz == float.class) return 0.0f;
         if (clazz == double.class) return 0.0;
         return null;
-    }
-
-    private static Class<?> getClassForParamType(String paramType){
-        switch (paramType){
-            case ""
-        }
     }
 
     public class KaitaiTreeListener implements TreeWillExpandListener, TreeSelectionListener {

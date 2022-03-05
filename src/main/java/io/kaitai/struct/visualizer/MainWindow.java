@@ -3,6 +3,7 @@ package io.kaitai.struct.visualizer;
 import io.kaitai.struct.ByteBufferKaitaiStream;
 
 import javax.swing.*;
+import javax.swing.filechooser.FileNameExtensionFilter;
 import java.awt.*;
 
 public class MainWindow extends JFrame {
@@ -10,6 +11,9 @@ public class MainWindow extends JFrame {
     private static final String VERSION = "0.8";
 
     private final VisualizerPanel visualizerPanel;
+    private JLabel jLabelSelectedKsyFileName;
+    private JLabel jLabelSelectedBinaryFile;
+
 
     public MainWindow() {
         super(APP_NAME + " v" + VERSION);
@@ -26,6 +30,21 @@ public class MainWindow extends JFrame {
 
     private JPanel getFileChooserPanel() {
 
+
+        JFileChooser fileChooserKsyFile = new JFileChooser();
+        fileChooserKsyFile.setMultiSelectionEnabled(false);
+        fileChooserKsyFile.setFileSelectionMode(JFileChooser.FILES_ONLY);
+        fileChooserKsyFile.setFileFilter(new FileNameExtensionFilter("KSY files", "ksy"));
+        fileChooserKsyFile.setAcceptAllFileFilterUsed(true);
+        fileChooserKsyFile.setDialogTitle("Choose KSY file");
+
+
+        JFileChooser fileChooserBinaryFileToParse = new JFileChooser();
+        fileChooserBinaryFileToParse.setMultiSelectionEnabled(false);
+        fileChooserBinaryFileToParse.setFileSelectionMode(JFileChooser.FILES_ONLY);
+        fileChooserBinaryFileToParse.setDialogTitle("Choose binary file to parse");
+
+
         JPanel fileChooserPanel = new JPanel();
         fileChooserPanel.setLayout(new GridBagLayout());
         GridBagConstraints gbc = new GridBagConstraints();
@@ -34,13 +53,20 @@ public class MainWindow extends JFrame {
         gbc.insets = new Insets(2, 5, 2, 5);
         gbc.gridy = 0;
         gbc.gridx = 0;
-        fileChooserPanel.add(new JLabel("KSY grammar file:"), gbc);
+        fileChooserPanel.add(new JLabel("KSY file:"), gbc);
         gbc.gridx = 1;
-        fileChooserPanel.add(new JButton("Browse..."), gbc);
+        JButton buttonChooseKsyFile = new JButton("Browse...");
+        buttonChooseKsyFile.addActionListener(e -> {
+            if (fileChooserKsyFile.showOpenDialog(null) == JFileChooser.APPROVE_OPTION) {
+                setKsyFile(fileChooserKsyFile.getSelectedFile().getAbsolutePath());
+            }
+        });
+        fileChooserPanel.add(buttonChooseKsyFile, gbc);
         gbc.gridx = 2;
         gbc.fill = GridBagConstraints.HORIZONTAL;
         gbc.weightx = 1.0;
-        fileChooserPanel.add(new JLabel("(no file selected)"), gbc);
+        jLabelSelectedKsyFileName = new JLabel("(no KSY file selected)");
+        fileChooserPanel.add(jLabelSelectedKsyFileName, gbc);
 
         gbc.fill = GridBagConstraints.NONE;
         gbc.weightx = 0.0;
@@ -48,12 +74,39 @@ public class MainWindow extends JFrame {
         gbc.gridx = 0;
         fileChooserPanel.add(new JLabel("Binary file to parse:"), gbc);
         gbc.gridx = 1;
-        fileChooserPanel.add(new JButton("Browse..."), gbc);
+        JButton buttonChooseBinaryFileToParse = new JButton("Browse...");
+        buttonChooseBinaryFileToParse.addActionListener(e -> {
+            if (fileChooserBinaryFileToParse.showOpenDialog(null) == JFileChooser.APPROVE_OPTION) {
+                setBinaryFileToParse(fileChooserBinaryFileToParse.getSelectedFile().getAbsolutePath());
+            }
+        });
+        fileChooserPanel.add(buttonChooseBinaryFileToParse, gbc);
         gbc.gridx = 2;
         gbc.fill = GridBagConstraints.HORIZONTAL;
         gbc.weightx = 1.0;
-        fileChooserPanel.add(new JLabel("(no file selected)"), gbc);
+        jLabelSelectedBinaryFile = new JLabel("(no binary file selected)");
+        fileChooserPanel.add(jLabelSelectedBinaryFile, gbc);
         return fileChooserPanel;
+    }
+
+    private void setKsyFile(String pathToKsyFile) {
+        try {
+            visualizerPanel.setKsyFile(pathToKsyFile);
+            jLabelSelectedKsyFileName.setText(pathToKsyFile);
+        }catch (Exception ex){
+
+            ex.printStackTrace();
+            JOptionPane.showMessageDialog(null, "message", "title", JOptionPane.ERROR_MESSAGE);
+        }
+    }
+
+    private void setBinaryFileToParse(String pathToBinaryFile) {
+        try {
+            visualizerPanel.setStreamToParse(new ByteBufferKaitaiStream(pathToBinaryFile));
+            jLabelSelectedBinaryFile.setText(pathToBinaryFile);
+        }catch (Exception ex){
+            JOptionPane.showMessageDialog(null, "message", "title", JOptionPane.ERROR_MESSAGE);
+        }
     }
 
     public static void main(final String[] args) throws Exception {
@@ -73,7 +126,9 @@ public class MainWindow extends JFrame {
                     System.err.println("Command-line usage: java -jar binaryFileToParse ksyFileName");
                 }
                 try {
-                    mainWindow.visualizerPanel.loadAll(new ByteBufferKaitaiStream(binaryFileToParse), ksyFileName);
+                    mainWindow.setBinaryFileToParse(binaryFileToParse);
+                    mainWindow.setKsyFile(ksyFileName);
+//                    mainWindow.visualizerPanel.loadAll(new ByteBufferKaitaiStream(binaryFileToParse), ksyFileName);
                 } catch (Exception ex) {
                     ex.printStackTrace();
                 }
