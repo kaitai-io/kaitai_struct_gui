@@ -5,6 +5,7 @@ import io.kaitai.struct.ByteBufferKaitaiStream;
 import javax.swing.*;
 import javax.swing.filechooser.FileNameExtensionFilter;
 import java.awt.*;
+import java.util.Arrays;
 
 public class MainWindow extends JFrame {
     private static final String APP_NAME = "Kaitai Struct Visualizer";
@@ -18,6 +19,13 @@ public class MainWindow extends JFrame {
     public MainWindow() {
         super(APP_NAME + " v" + VERSION);
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+
+        //noinspection ConstantConditions
+        setIconImages(Arrays.asList(
+                new ImageIcon(getClass().getResource("/kaitai-struct-icon-48.png")).getImage(),
+                new ImageIcon(getClass().getResource("/kaitai-struct-icon-32.png")).getImage(),
+                new ImageIcon(getClass().getResource("/kaitai-struct-icon-16.png")).getImage()
+        ));
 
         getContentPane().setLayout(new BorderLayout());
         getContentPane().add(getFileChooserPanel(), BorderLayout.NORTH);
