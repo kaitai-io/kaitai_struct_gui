@@ -28,17 +28,36 @@ that can read described data structure from a file / stream and give
 access to it in a nice, easy-to-comprehend API.
 
 ## Build
-Install java, maven and, if on windows, git-bash
 
-Run in console:
+Install Java (JDK 8 or newer) and Apache Maven. If on Windows, also install Git.
+
+Download or clone this repository. Run this command:
 
 ```bash
 mvn install
 ```
 
+then the output will be in a subdirectory called `target`.
+
+## Usage
+
+Depending on the system, double-clicking on the jar file may launch the GUI.
+
+Otherwise, launch the GUI via the command-line. The exact name of the jar file will vary. The form is:
+
+```bash
+java -jar kaitai_struct_visualizer_java.jar
+```
+
+The input files can be specified as arguments, in this order:
+
+```bash
+java -jar kaitai_struct_visualizer_java.jar binaryFileToParse ksyFile
+```
+
 ## Licensing
 
-This GUI vis tool project itself is copyright (C) 2016-2019 Kaitai
+This GUI vis tool project itself is copyright (C) 2016-2022 Kaitai
 Project.
 
 This program is free software: you can redistribute it and/or modify
