@@ -203,7 +203,7 @@ public class VisualizerPanel extends JPanel {
     }
 
     public void parseFileAndUpdateGui() throws Exception {
-        if (kaitaiStructClass != null && kaitaiStructInstance != null) {
+        if (isParserReady() && binaryStreamToParse != null) {
             kaitaiStructInstance = getKaitaiStructInstance(kaitaiStructClass, binaryStreamToParse);
             invokeReadMethod();
             loadKaitaiStruct();
