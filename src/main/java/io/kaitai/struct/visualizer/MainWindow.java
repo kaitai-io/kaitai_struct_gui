@@ -9,14 +9,14 @@ import java.io.IOException;
 import java.util.Arrays;
 
 public class MainWindow extends JFrame {
-    private static final String APP_NAME = "Kaitai Struct Visualizer";
+    static final String APP_NAME = "Kaitai Struct Visualizer";
     private static final String VERSION = "0.8";
 
     private final VisualizerPanel visualizerPanel;
     private JLabel jLabelSelectedKsyFile;
     private JLabel jLabelSelectedBinaryFile;
 
-    // default privacy makes it accessible to classes in the same package.
+    // use default privacy so that VisualizerPanel can access it
     JLabel jLabelStatus;
     JButton jButtonChooseKsyFile;
 
@@ -25,7 +25,7 @@ public class MainWindow extends JFrame {
         super(APP_NAME + " v" + VERSION);
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 
-        //noinspection ConstantConditions
+        //noinspection ConstantConditions - suppress IntelliJ warning that getResource() might return null
         setIconImages(Arrays.asList(
                 new ImageIcon(getClass().getResource("/kaitai-struct-icon-48.png")).getImage(),
                 new ImageIcon(getClass().getResource("/kaitai-struct-icon-32.png")).getImage(),
@@ -137,19 +137,21 @@ public class MainWindow extends JFrame {
             final String message = "<html>Couldn't open the selected file (\"" + pathToBinaryFile + "\") for parsing.<br>" +
                     "The exception was: " + ex + ".<br>" +
                     "See the console for the full stack trace.";
-            JOptionPane.showMessageDialog(this, message, APP_NAME, JOptionPane.WARNING_MESSAGE);
+            JOptionPane.showMessageDialog(this, message, APP_NAME, JOptionPane.ERROR_MESSAGE);
             return;
         }
         visualizerPanel.setBinaryStreamToParse(streamToParse);
 
-        try {
-            visualizerPanel.parseFileAndUpdateGui();
-        } catch (Exception ex) {
-            ex.printStackTrace();
-            final String message = "<html>There was an error initializing Kaitai Struct or parsing the file.<br>" +
-                    "The exception was: " + ex + "<br>" +
-                    "See the console for the full stack trace.";
-            JOptionPane.showMessageDialog(this, message, APP_NAME, JOptionPane.WARNING_MESSAGE);
+        if(visualizerPanel.isParserReady()) {
+            try {
+                visualizerPanel.parseFileAndUpdateGui();
+            } catch (Exception ex) {
+                ex.printStackTrace();
+                final String message = "<html>There was an error initializing Kaitai Struct or parsing the file.<br>" +
+                        "The exception was: " + ex + "<br>" +
+                        "See the console for the full stack trace.";
+                JOptionPane.showMessageDialog(this, message, APP_NAME, JOptionPane.ERROR_MESSAGE);
+            }
         }
     }
 
