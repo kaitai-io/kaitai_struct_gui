@@ -5,6 +5,8 @@ formats, based on [Kaitai Struct](http://kaitai.io) project. This vis
 tool uses [Java's Swing](https://en.wikipedia.org/wiki/Swing_%28Java%29)
 for its GUI elements.
 
+![screenshot](etc/screenshot.png)
+
 Its functionality is akin to similar projects:
 
 * [kaitai_struct_visualizer](https://github.com/kaitai-io/kaitai_struct_visualizer) in Ruby
