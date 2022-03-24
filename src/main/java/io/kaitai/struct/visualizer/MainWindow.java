@@ -42,14 +42,6 @@ public class MainWindow extends JFrame {
         setVisible(true);
     }
 
-    private JPanel getStatusBarPanel() {
-        jLabelStatus = new JLabel("Ready.");
-        final JPanel statusBarPanel = new JPanel();
-        statusBarPanel.setLayout(new FlowLayout(FlowLayout.LEFT, 5, 2));
-        statusBarPanel.add(jLabelStatus);
-        return statusBarPanel;
-    }
-
     private JPanel getFileChooserPanel() {
         final JPanel retVal = new JPanel();
         retVal.setLayout(new GridBagLayout());
@@ -117,6 +109,21 @@ public class MainWindow extends JFrame {
         return retVal;
     }
 
+    private JPanel getStatusBarPanel() {
+        jLabelStatus = new JLabel("Ready.");
+        final JPanel statusBarPanel = new JPanel();
+        statusBarPanel.setLayout(new FlowLayout(FlowLayout.LEFT, 5, 2));
+        statusBarPanel.add(jLabelStatus);
+        return statusBarPanel;
+    }
+
+    /**
+     * Set the file containing the Kaitai Struct language.
+     * <p>
+     * If the binary file has also been set, then the GUI will be updated when compilation is finished.
+     *
+     * @param pathToKsyFile the location of the KSY file
+     */
     private void setKsyFile(String pathToKsyFile) {
         jLabelSelectedKsyFile.setText(pathToKsyFile);
         jButtonChooseKsyFile.setEnabled(false);
@@ -126,6 +133,13 @@ public class MainWindow extends JFrame {
         visualizerPanel.compileKsyFile(pathToKsyFile);
     }
 
+    /**
+     * Set the binary file to be parsed with Kaitai Struct.
+     * <p>
+     * If the Kaitai Struct parser has also been set and compiled, then the GUI will also be updated.
+     *
+     * @param pathToBinaryFile the location of the binary file to parse
+     */
     private void setBinaryFileToParse(String pathToBinaryFile) {
         jLabelSelectedBinaryFile.setText(pathToBinaryFile);
 
@@ -142,7 +156,7 @@ public class MainWindow extends JFrame {
         }
         visualizerPanel.setBinaryStreamToParse(streamToParse);
 
-        if(visualizerPanel.isParserReady()) {
+        if (visualizerPanel.isParserReady()) {
             try {
                 visualizerPanel.parseFileAndUpdateGui();
             } catch (Exception ex) {
