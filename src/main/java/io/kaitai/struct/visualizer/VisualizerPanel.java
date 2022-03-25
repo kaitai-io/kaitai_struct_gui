@@ -43,7 +43,7 @@ public class VisualizerPanel extends JPanel {
     /**
      * Regular expression with two groups: (1) class name and (2) type parameters.
      * <p>
-     * Type parameters must be parsed with {@link #PARAMETER_NAME}.
+     * Type parameters must be parsed with the {@link #PARAMETER_NAME} regex.
      */
     private static final Pattern TOP_CLASS_NAME_AND_PARAMETERS = Pattern.compile(
             "public class (.+?) extends KaitaiStruct.*" +
@@ -135,18 +135,18 @@ public class VisualizerPanel extends JPanel {
     }
 
     /**
-     * Compiles the specified Kaitai Struct YAML file into a Java class.
+     * Compiles a Kaitai Struct YAML file into a Java class.
      * <p>
      * There are two steps:
      * <ol>
-     *     <li>The KSY file is compiled into Java source code.</li>
-     *     <li>The Java source code is compiled into an instance of <code>java.lang.Class</code>.</li>
+     *     <li>Compile the KSY file into Java source code.</li>
+     *     <li>Compile the Java source code into an instance of {@code java.lang.Class}.</li>
      * </ol>
      * <p>
-     * If compilation succeeds, then subsequent calls to the {@link #isParserReady} method returns true.
+     * If compilation succeeds, then subsequent calls to the {@link #isParserReady} method return true.
      * </p>
      *
-     * @param ksyFileName path to the Kaitai Struct YAML file to compile into a Java class
+     * @param ksyFileName path to the Kaitai Struct YAML file
      */
     public void compileKsyFile(String ksyFileName) {
 
@@ -171,7 +171,7 @@ public class VisualizerPanel extends JPanel {
             }
 
             private void parseUserParams(String paramsToParse) {
-                // TODO: get the user params out of this SwingWorker and into the createKaitaiStructInstance() method.
+                // TODO: get the user parameters out of this SwingWorker so we can use them.
                 final ArrayList<String> paramNames = new ArrayList<>();
                 final ArrayList<String> paramTypes = new ArrayList<>();
                 final Matcher paramMatcher = PARAMETER_NAME.matcher(paramsToParse);
@@ -214,8 +214,11 @@ public class VisualizerPanel extends JPanel {
                     try {
                         parseFileAndUpdateGui();
                     } catch (Exception ex) {
-                        // TODO handle this better
                         ex.printStackTrace();
+                        final String message = "<html>There was an error initializing Kaitai Struct or parsing the file.<br>" +
+                                "The exception was: " + ex + "<br>" +
+                                "See the console for the full stack trace.";
+                        JOptionPane.showMessageDialog(MAIN_WINDOW, message, MainWindow.APP_NAME, JOptionPane.ERROR_MESSAGE);
                     }
                 }
             }
@@ -223,8 +226,11 @@ public class VisualizerPanel extends JPanel {
     }
 
     /**
+     * If the parser and binary stream have both been set, then this method parses the stream
+     * and shows the result in the GUI.
+     *
      * @throws ReflectiveOperationException if creating an instance of the Kaitai Struct class failed,
-     *                                      or if invoking the <code>_read</code> method failed
+     *                                      or if parsing the binary stream failed
      */
     public void parseFileAndUpdateGui() throws ReflectiveOperationException {
         if (isParserReady() && binaryStreamToParse != null) {
@@ -236,29 +242,28 @@ public class VisualizerPanel extends JPanel {
             final Method readMethod = kaitaiStructClass.getMethod("_read");
             readMethod.invoke(kaitaiStructInstance);
 
-            initJTree();
+            updateHexEditorData();
+            updateJTree();
         }
     }
 
     /**
      * Returns whether a KSY file has been compiled into a Java class.
      *
-     * @return
+     * @return true if the application has a reference to a compiled Kaitai Struct parser; false otherwise.
      */
     public boolean isParserReady() {
         return kaitaiStructClass != null;
     }
 
-    /**
-     *
-     */
-    private void initJTree() {
+    private void updateHexEditorData() {
         kaitaiStructInstance._io().seek(0);
         final byte[] allBytes = kaitaiStructInstance._io().readBytesFull(); //read all remaining bytes
-
         HEX_EDITOR.setData(new SimpleDataProvider(allBytes));
         HEX_EDITOR.setDefinitionStatus(JHexView.DefinitionStatus.DEFINED);
+    }
 
+    private void updateJTree(){
         final DataNode root = new DataNode(0, kaitaiStructInstance, "[root]");
         TREE_MODEL.setRoot(root);
         root.explore(TREE_MODEL, null);
@@ -269,10 +274,10 @@ public class VisualizerPanel extends JPanel {
     }
 
     /**
-     * Compiles the specified Kaitai Struct YAML file into Java source code.
+     * Compiles a Kaitai Struct YAML file into Java source code.
      *
      * @param ksyFileName path to the KSY file to compile
-     * @return Java source code as a string
+     * @return a {@code String} of Java source code which is the result of compiling the KSY file
      */
     private static String compileKsyFileToJavaSourceCode(String ksyFileName) {
         KSVersion.current_$eq(Version.version());
@@ -305,62 +310,65 @@ public class VisualizerPanel extends JPanel {
     }
 
     /**
-     * Compiles the specified Java source code into a Java class.
+     * Compiles Java source code of a Kaitai Struct parser into a Java class.
      *
-     * @param sourceCode Java source code of a Kaitai Struct to compile
-     * @param className  the name of the Java class to compile
-     * @return a compiled Kaitai Struct class
+     * @param sourceCode Java source code of a Kaitai Struct parser
+     * @param className  name of the Java class to create
+     * @return a Java class compiled from {@code sourceCode}
      * @throws Exception if compilation failed
      */
     @SuppressWarnings("unchecked")
     private Class<? extends KaitaiStruct> compileJavaSourceCodeToJavaClass(String sourceCode, String className) throws Exception {
         final String fullyQualifiedClassName = DEST_PACKAGE + "." + className;
-        final Class<?> ksyClassWithWildcardType = InMemoryJavaCompiler.newInstance().compile(fullyQualifiedClassName, sourceCode);
+        final Class<?> classWithWildcardType = InMemoryJavaCompiler.newInstance().compile(fullyQualifiedClassName, sourceCode);
 
-        if (!KaitaiStruct.class.isAssignableFrom(ksyClassWithWildcardType)) {
+        if (KaitaiStruct.class.isAssignableFrom(classWithWildcardType)) {
+            return (Class<? extends KaitaiStruct>) classWithWildcardType;
+        } else {
             throw new RuntimeException(String.format(
                     "the compiled class is not assignable from \"%s\". The compiled class is \"%s\", and its superclass is \"%s\".",
-                    KaitaiStruct.class, ksyClassWithWildcardType, ksyClassWithWildcardType.getSuperclass()
+                    KaitaiStruct.class, classWithWildcardType, classWithWildcardType.getSuperclass()
             ));
         }
 
-        // If the isAssignableFrom check passed, then this unchecked cast should work.
-        return (Class<? extends KaitaiStruct>) ksyClassWithWildcardType;
     }
 
 
     /**
-     * Creates an instance of the Kaitai Struct thing which has the input stream set to the
+     * Instantiates a Kaitai Struct class so that the instance will read from the specified binary stream, and returns
+     * the instance.
      *
-     * @param ksyClass the Java class to instantiate
-     * @param streamToParse
-     * @return
-     * @throws ReflectiveOperationException
+     * @param ksClass       the Kaitai Struct Java class to instantiate
+     * @param streamToParse the binary stream that the Kaitai Struct parser will parse
+     * @return an instance of {@code ksClass} which will parse {@code streamToParse}
+     * @throws ReflectiveOperationException if the instance could not be created
      */
     private static KaitaiStruct createKaitaiStructInstance(
-            Class<? extends KaitaiStruct> ksyClass,
+            Class<? extends KaitaiStruct> ksClass,
             /*List<String> paramNames,*/
             ByteBufferKaitaiStream streamToParse)
             throws ReflectiveOperationException {
-        final Constructor<? extends KaitaiStruct> ctor = findConstructor(ksyClass);
-        final Class<?>[] types = ctor.getParameterTypes();
-        final Object[] argsToPassIntoConstructor = new Object[types.length];
+        final Constructor<? extends KaitaiStruct> ctor = findConstructor(ksClass);
+        final Class<?>[] paramTypes = ctor.getParameterTypes();
+        final Object[] argsToPassIntoConstructor = new Object[paramTypes.length];
         argsToPassIntoConstructor[0] = streamToParse;
         for (int i = 3; i < argsToPassIntoConstructor.length; ++i) {
-            argsToPassIntoConstructor[i] = getDefaultValue(types[i]);
+            argsToPassIntoConstructor[i] = getDefaultValue(paramTypes[i]);
         }
         // TODO: get parameters from user
         return ctor.newInstance(argsToPassIntoConstructor);
     }
 
     /**
-     * Returns
+     * Returns a constructor from the given Kaitai Struct class.
+     * <p>
+     * TODO: search for a constructor which accepts user parameters.
      *
-     * @param ksyClass
-     * @return
+     * @param ksClass a Kaitai Struct Java class from which to find a constructor
+     * @return a {@code Constructor} object
      */
     @SuppressWarnings("unchecked")
-    private static Constructor<? extends KaitaiStruct> findConstructor(Class<? extends KaitaiStruct> ksyClass) {
+    private static Constructor<? extends KaitaiStruct> findConstructor(Class<? extends KaitaiStruct> ksClass) {
         /*
          Difference between getConstructors and getDeclaredConstructors:
          The getConstructors() method only returns public constructors.
@@ -373,21 +381,21 @@ public class VisualizerPanel extends JPanel {
          Once we've added support for user parameters, we can use the getConstructor() method
          and specify the user param types.
          Java does not support arrays of bounded wildcards. As a result:
-           * ksyClass.getConstructors() returns Constructor<?>[]
-           * ksyClass.getConstructor()  returns Constructor<? extends KaitaiStruct>
+           * ksClass.getConstructors() returns Constructor<?>[]
+           * ksClass.getConstructor()  returns Constructor<? extends KaitaiStruct>
          We're using getConstructors() so we have to manually cast the result.
          */
-        for (final Constructor<?> ctor : ksyClass.getConstructors()) {
+        for (final Constructor<?> ctor : ksClass.getConstructors()) {
             final Class<?>[] types = ctor.getParameterTypes();
             if (types.length >= 3
                     && types[0] == KaitaiStream.class
                     && types[1] == KaitaiStruct.class
-                    && types[2] == ksyClass
+                    && types[2] == ksClass
             ) {
                 return (Constructor<? extends KaitaiStruct>) ctor;
             }
         }
-        throw new IllegalArgumentException(ksyClass + " has no KaitaiStruct-generated constructor");
+        throw new IllegalArgumentException(ksClass + " has no KaitaiStruct-generated constructor");
     }
 
     private static Object getDefaultValue(Class<?> clazz) {

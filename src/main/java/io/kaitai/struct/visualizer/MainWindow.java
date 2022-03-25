@@ -51,9 +51,9 @@ public class MainWindow extends JFrame {
         constraints.fill = GridBagConstraints.NONE;
         constraints.weightx = 0.0;
         constraints.insets = new Insets(2, 5, 2, 5);
-        constraints.gridy = 0;
         constraints.anchor = GridBagConstraints.EAST;
         constraints.gridx = 0;
+        constraints.gridy = 0;
         retVal.add(new JLabel("KSY file:"), constraints);
 
         constraints.gridy = 1;
@@ -69,6 +69,7 @@ public class MainWindow extends JFrame {
         final JFileChooser fileChooserBinaryFile = new JFileChooser();
         fileChooserBinaryFile.setMultiSelectionEnabled(false);
         fileChooserBinaryFile.setFileSelectionMode(JFileChooser.FILES_ONLY);
+        fileChooserKsyFile.setAcceptAllFileFilterUsed(true);
         fileChooserBinaryFile.setDialogTitle("Choose binary file to parse");
 
         jButtonChooseKsyFile = new JButton("Browse...");
@@ -88,15 +89,15 @@ public class MainWindow extends JFrame {
         });
 
         constraints.anchor = GridBagConstraints.WEST;
-        constraints.gridy = 0;
         constraints.gridx = 1;
+        constraints.gridy = 0;
         retVal.add(jButtonChooseKsyFile, constraints);
 
         constraints.gridy = 1;
         retVal.add(jButtonChooseBinaryFileToParse, constraints);
 
-        constraints.gridy = 0;
         constraints.gridx = 2;
+        constraints.gridy = 0;
         constraints.fill = GridBagConstraints.HORIZONTAL;
         constraints.weightx = 1.0;
         jLabelSelectedKsyFile = new JLabel("(no KSY file selected)");
@@ -118,11 +119,11 @@ public class MainWindow extends JFrame {
     }
 
     /**
-     * Set the file containing the Kaitai Struct language.
+     * Set the Kaitai Struct YAML file, and start compiling it into a Java class.
      * <p>
      * If the binary file has also been set, then the GUI will be updated when compilation is finished.
      *
-     * @param pathToKsyFile the location of the KSY file
+     * @param pathToKsyFile location of the KSY file
      */
     private void setKsyFile(String pathToKsyFile) {
         jLabelSelectedKsyFile.setText(pathToKsyFile);
@@ -136,9 +137,9 @@ public class MainWindow extends JFrame {
     /**
      * Set the binary file to be parsed with Kaitai Struct.
      * <p>
-     * If the Kaitai Struct parser has also been set and compiled, then the GUI will also be updated.
+     * If the Kaitai Struct parser has also been compiled, then the GUI will also be updated.
      *
-     * @param pathToBinaryFile the location of the binary file to parse
+     * @param pathToBinaryFile location of the binary file to parse
      */
     private void setBinaryFileToParse(String pathToBinaryFile) {
         jLabelSelectedBinaryFile.setText(pathToBinaryFile);
