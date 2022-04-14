@@ -139,29 +139,31 @@ public class DataNode extends DefaultMutableTreeNode {
                 } else if (value instanceof KaitaiStruct) {
                     DebugAids debug = DebugAids.fromStruct((KaitaiStruct) value);
 
-                    for (Method m : cl.getDeclaredMethods()) {
-                        // Ignore static methods, i.e. "fromFile"
-                        if (Modifier.isStatic(m.getModifiers()))
-                            continue;
 
-                        String methodName = m.getName();
+                    final Field seqFieldsField;
+                    try {
+                        seqFieldsField = cl.getDeclaredField("_seqFields");
+                    } catch (NoSuchFieldException ex) {
+                        ex.printStackTrace();
+                        return children;
+                    }
+                    final Object seqFieldsValue = seqFieldsField.get(value);
+                    final String[] fieldNamesInOrder = (String[]) seqFieldsValue;
 
-                        // Ignore all internal methods, i.e. "_io", "_parent", "_root"
-                        if (methodName.charAt(0) == '_')
-                            continue;
-
+                    for(String fieldName : fieldNamesInOrder){
                         try {
-                            Field field = cl.getDeclaredField(methodName);
+                            Field field = cl.getDeclaredField(fieldName);
                             field.setAccessible(true);
                             Object curValue = field.get(value);
 
-                            Integer posStart = debug.getStart(methodName);
-                            Integer posEnd = debug.getEnd(methodName);
+                            Integer posStart = debug.getStart(fieldName);
+                            Integer posEnd = debug.getEnd(fieldName);
 
+                            Method  m = cl.getDeclaredMethod(fieldName);
                             DataNode dn = new DataNode(depth + 1, curValue, m, posStart, posEnd);
                             children.add(dn);
                         } catch (NoSuchFieldException e) {
-                            System.out.println("no field, ignoring method " + methodName);
+                            System.out.println("no field, ignoring field " + fieldName);
                         }
                     }
                 }
