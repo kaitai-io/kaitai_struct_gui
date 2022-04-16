@@ -11,7 +11,10 @@ import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 public class DataNode extends DefaultMutableTreeNode {
     private boolean explored = false;
@@ -139,7 +142,7 @@ public class DataNode extends DefaultMutableTreeNode {
                 } else if (value instanceof KaitaiStruct) {
                     DebugAids debug = DebugAids.fromStruct((KaitaiStruct) value);
 
-
+                    ////////// Find sequential fields and show them in order. //////////
                     final Field seqFieldsField;
                     try {
                         seqFieldsField = cl.getDeclaredField("_seqFields");
@@ -148,28 +151,59 @@ public class DataNode extends DefaultMutableTreeNode {
                         return children;
                     }
                     final Object seqFieldsValue = seqFieldsField.get(value);
-                    final String[] fieldNamesInOrder = (String[]) seqFieldsValue;
-
-                    for(String fieldName : fieldNamesInOrder){
-                        try {
-                            Field field = cl.getDeclaredField(fieldName);
-                            field.setAccessible(true);
-                            Object curValue = field.get(value);
-
-                            Integer posStart = debug.getStart(fieldName);
-                            Integer posEnd = debug.getEnd(fieldName);
-
-                            Method  m = cl.getDeclaredMethod(fieldName);
-                            DataNode dn = new DataNode(depth + 1, curValue, m, posStart, posEnd);
-                            children.add(dn);
-                        } catch (NoSuchFieldException e) {
-                            System.out.println("no field, ignoring field " + fieldName);
-                        }
+                    final String[] seqFieldNamesInOrder = (String[]) seqFieldsValue;
+                    for (String fieldName : seqFieldNamesInOrder) {
+                        Method accessorMethod = cl.getDeclaredMethod(fieldName);
+                        addDataNode(children, cl, debug, accessorMethod, fieldName);
                     }
+                    final Set<String> seqFieldNames = new HashSet<>(Arrays.asList(seqFieldNamesInOrder));
+
+                    ////////// Find instances and show them after the sequential fields. //////////
+                    for (Method m : cl.getDeclaredMethods()) {
+
+                        // Ignore static methods, i.e. "fromFile"
+                        if (Modifier.isStatic(m.getModifiers())) {
+                            continue;
+                        }
+
+                        String methodName = m.getName();
+
+                        // Ignore all internal methods, i.e. "_io", "_parent", "_root"
+                        if (methodName.charAt(0) == '_') {
+                            continue;
+                        }
+
+                        // Ignore methods that get sequential fields
+                        if (seqFieldNames.contains(methodName)) {
+                            continue;
+                        }
+
+                        addDataNode(children, cl, debug, m, methodName);
+                    }
+
                 }
                 setProgress(0);
                 return children;
             }
+
+            private void addDataNode(List<DataNode> children, Class<?> kaitaiStructClass,
+                                     DebugAids debug, Method accessorMethod, String fieldName)
+                    throws IllegalAccessException {
+                try {
+                    Field field = kaitaiStructClass.getDeclaredField(fieldName);
+                    field.setAccessible(true);
+                    Object curValue = field.get(value);
+
+                    Integer posStart = debug.getStart(fieldName);
+                    Integer posEnd = debug.getEnd(fieldName);
+
+                    DataNode dn = new DataNode(depth + 1, curValue, accessorMethod, posStart, posEnd);
+                    children.add(dn);
+                } catch (NoSuchFieldException e) {
+                    System.out.println("no field, ignoring " + fieldName);
+                }
+            }
+
 
             @Override
             protected void done() {
