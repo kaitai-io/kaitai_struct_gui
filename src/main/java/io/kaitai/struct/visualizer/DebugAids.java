@@ -24,21 +24,21 @@ public class DebugAids {
         this.arrEnd = arrEnd;
     }
 
-    public Integer getStart(String attrName) {
+    public Integer getAttrStart(String attrName) {
         return attrStart.get(attrName);
     }
 
-    public Integer getEnd(String attrName) {
+    public Integer getAttrEnd(String attrName) {
         return attrEnd.get(attrName);
     }
 
-    public Integer getStart(String attrName, int idx) {
-        ArrayList<Integer> positions = arrStart.get(attrName);
+    public Integer getArrayStart(String arrName, int idx) {
+        ArrayList<Integer> positions = arrStart.get(arrName);
         return (positions != null) ? positions.get(idx) : null;
     }
 
-    public Integer getEnd(String attrName, int idx) {
-        ArrayList<Integer> positions = arrEnd.get(attrName);
+    public Integer getArrayEnd(String arrName, int idx) {
+        ArrayList<Integer> positions = arrEnd.get(arrName);
         return (positions != null) ? positions.get(idx) : null;
     }
 
