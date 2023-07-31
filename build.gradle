@@ -1,0 +1,70 @@
+plugins {
+    id 'java'
+
+}
+
+group 'io.github.proto4j'
+version '0.11'
+
+compileJava.options.encoding = 'UTF-8'
+sourceCompatibility = 13
+targetCompatibility = 13
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    // Library used for displaying SVG images
+    implementation 'org.apache.xmlgraphics:batik-all:1.16'
+
+    // Just comment out this line and the library won't be included in the
+    // project build.
+    implementation 'com.formdev:flatlaf:2.6'
+
+    implementation fileTree('lib')
+    implementation 'io.kaitai:kaitai-struct-runtime:0.10'
+    implementation 'io.kaitai:kaitai-struct-compiler_2.12:0.10'
+    implementation 'com.beust:jcommander:1.72'
+    implementation 'io.github.proto4j:proto4j-iconmgr:0.1'
+    implementation 'org.mdkt.compiler:InMemoryJavaCompiler:1.3.0'
+
+    testImplementation 'org.junit.jupiter:junit-jupiter-api:5.8.1'
+    testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.8.1'
+}
+
+
+jar {
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+    manifest {
+        attributes('Main-Class': 'io.kaitai.struct.visualizer.Main')
+    }
+}
+
+//noinspection ConfigurationAvoidance
+task KaitaiStructGUI(type: Jar) {
+    manifest.from jar.manifest
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+    from {
+        configurations.runtimeClasspath.collect {
+            it.isDirectory() ? it : zipTree(it)
+        }
+    } {
+        // preventing signed jars into the final JAR
+        exclude "META-INF/*.SF"
+        exclude "META-INF/*.DSA"
+        exclude "META-INF/*.RSA"
+    }
+    with jar
+}
+
+java {
+    withSourcesJar()
+    // Comment out the next statement if you don't want ot generate
+    // the Javadoc files
+    // withJavadocJar()
+}
+
+test {
+    useJUnitPlatform()
+}
