@@ -42,10 +42,10 @@ gradlew build KaitaiStructGUI
 
 ## How to use
 
-Since this tool is accessed via the command line, here is a quick introduction on how to use it.
+Since this tool is accessed via the command line, here is a quick introduction on how to use it. For example:
 
 ```bash
-java -jar ./build/libs/proto4j-kaitai_struct_gui-0.11.jar -ksy ./docs/png.ksy ./docs/Example.png
+java -jar ./build/libs/kaitai_struct_gui-0.11.jar -ksy ./docs/png.ksy ./docs/Example.png
 ```
 
 > Note: To apply dark-mode, just use `-dark` as an extra argument.
