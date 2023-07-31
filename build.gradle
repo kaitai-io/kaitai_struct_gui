@@ -3,7 +3,7 @@ plugins {
 
 }
 
-group 'io.github.proto4j'
+group 'io.kaitai'
 version '0.11'
 
 compileJava.options.encoding = 'UTF-8'
