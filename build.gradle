@@ -7,8 +7,10 @@ group 'io.kaitai'
 version '0.11'
 
 compileJava.options.encoding = 'UTF-8'
-//sourceCompatibility = 8
-//targetCompatibility = 13
+// Version 13 is needed because proto4j-iconmgr is available
+// only at version 13+
+sourceCompatibility = 13
+targetCompatibility = 13
 
 repositories {
     mavenCentral()
