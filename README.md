@@ -14,6 +14,12 @@ Its functionality is akin to similar projects:
 ... but this Java version is significantly simpler and is no longer under
 active development.
 
+> Note: This tool is a CLI tool that provides a GUI interface.
+
+## Overview
+
+![Example Visual](docs/Example.png)
+
 Kaitai Struct is a declarative language used to describe various
 binary data structures, laid out in files or in memory: i.e. binary
 file formats, network stream packet formats, etc.
@@ -26,12 +32,39 @@ that can read described data structure from a file / stream and give
 access to it in a nice, easy-to-comprehend API.
 
 ## Build
-Install java, maven and, if on windows, git-bash
+Install java, gradle and, if on windows, git-bash
 
 Run in console:
 
 ```bash
-mvn install
+gradlew build KaitaiStructGUI
+```
+
+## How to use
+
+Since this tool is accessed via the command line, here is a quick introduction on how to use it. For example:
+
+```bash
+java -jar ./build/libs/kaitai_struct_gui-0.11.jar -ksy ./docs/png.ksy ./docs/Example.png
+```
+
+> Note: To apply dark-mode, just use `-dark` as an extra argument.
+
+### Parameter overview
+
+```text
+Usage: <path/to/jar> [options] Path to the binary
+  Options:
+    -h, --help
+      Show this help message.
+      Default: false
+    -dark
+      Enables dark layout.
+      Default: false
+    -java
+      Path to generated Java file
+    -ksy
+      Path to the .ksy file
 ```
 
 ## Licensing
@@ -59,4 +92,8 @@ Vis tool depends on the following libraries:
 * [kaitai_struct_compiler](https://github.com/kaitai_struct_compiler) — GPLv3+ license
   * [fastparse](http://www.lihaoyi.com/fastparse/) — MIT license
   * [snakeyaml](https://bitbucket.org/asomov/snakeyaml) — Apache 2.0 license
-* [JHexView](https://github.com/Mingun/JHexView) — LGPL-2.1 license
+* [JHexViewer](https://github.com/rendner/jhexviewer) — MIT license
+* [Proto4j-IconManager](https://github.com/Proto4j/proto4j-iconmgr) — MIT License
+* [Apache-Batik](https://xmlgraphics.apache.org/batik) — Apache 2.0 license
+* [JetBrains-Icons](https://jetbrains.design/intellij/resources/icons_list/) — Apache 2.0 license
+* [JCommander](https://jcommander.org) — Apache 2.0 license
